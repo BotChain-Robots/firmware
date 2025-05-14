@@ -44,6 +44,7 @@ idf.py flash monitor
 ```
 
 ## Using an IDE
+Any IDE that supports CMake should be compatible with this project.
 ### JetBrains CLion
 CLion is compatible with this project. Follow [the tutorial on Espressif's site](https://developer.espressif.com/blog/clion/) with the following modifications:
 - When asked to select a project, simply import the root directory of this repository (ie. the `firmware` folder).
