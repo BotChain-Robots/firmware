@@ -1,5 +1,7 @@
 # firmware
 
+**This project is currently setup to work with the ESP32, we will be using the ESP32-c6 in the future.**
+
 ## Install Dependencies
 ### MacOS
 Install xcode command line tools (if you do not already have them)
@@ -28,23 +30,22 @@ The board is flashed via UART. A USB to UART adapter is provided as part of the 
 ### MacOS
 Export environment variables
 ```
-cd ~/esp/esp-idf && . ./export.sh
+. ~/esp/esp-idf/export.sh
 ```
 
-Flashing via UART
+Build the project
 ```
-idf.py -p PORT [-b BAUD] flash
-```
-
-## Connect to serial
-### MacOS
-Find the port
-```
-ls /dev/cu.*
+idf.py build
 ```
 
-View the output
+Flash and open serial monitor
 ```
-screen /dev/cu.device_name [BAUD]
+idf.py flash monitor
 ```
 
+## Using an IDE
+### JetBrains CLion
+CLion is compatible with this project. Follow [the tutorial on Espressif's site](https://developer.espressif.com/blog/clion/) with the following modifications:
+- When asked to select a project, simply import the root directory of this repository (ie. the `firmware` folder).
+- If the `Open Project Wizard` does not open, access it via `Settings > Build, Execution, Deployment > CMake`.
+- When setting the `DIDF_TARGET`, do not use `esp32s3`, instead, use `-DIDF_TARGET=esp32`.
