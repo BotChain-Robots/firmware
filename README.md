@@ -2,6 +2,9 @@
 
 **This project is currently setup to work with the ESP32, we will be using the ESP32-c6 in the future.**
 
+## Setup
+This project uses ESP-IDF version 5.4.
+
 ### Install Dependencies
 #### MacOS
 Install xcode command line tools (if you do not already have them)
@@ -9,10 +12,9 @@ Install xcode command line tools (if you do not already have them)
 xcode-select --install
 ```
 
-Install project & ESP-IDF dependencies
+Install project & ESP-IDF dependencies (if you do not already have them)
 ```
-brew install cmake ninja dfu-util
-brew install python3
+brew install cmake ninja dfu-util python3
 ```
 
 Setup ESP-IDF
@@ -24,14 +26,47 @@ cd ~/esp/isp-idf
 ./install.sh esp32
 ```
 
+#### Windows
+Install ESP-IDF with with the GUI [Windows installer](https://dl.espressif.com/dl/esp-idf/?idf=4.4). 
+- Use default options.
+- You may install ESP-IDF to a path that is different than the default, however, keep the length of the path under 90 characters and do not include any spaces or non ASCII characters. 
+- Select version v5.4.x.
+- The installer will automatically provide
+    - Embedded Python
+    - Required cross compilers
+    - OpenOCD
+    - CMake and Ninja
+    - ESP-IDF
+
+
 ## Development
-### Command Line Tools
 The board is flashed via UART. A USB to UART adapter is provided as part of the devboard.
 
+### Command Line Tools
 #### MacOS
 Export environment variables
 ```
 . ~/esp/esp-idf/export.sh
+```
+
+Build the project
+```
+idf.py build
+```
+
+Flash and open serial monitor (Use Ctrl+] to exit)
+```
+idf.py flash monitor
+```
+
+#### Windows
+Run the following commands in a command prompt.
+
+Export environment variables (alternatively run the ESP-IDF Command Prompt shortcut)
+```
+# Example path: C:\Espressif\frameworks\esp-idf-v5.4.1-3\
+
+/Path/To/ESP-IDF/export.bat
 ```
 
 Build the project
