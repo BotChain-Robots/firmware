@@ -1,4 +1,4 @@
-# firmware
+# Firmware
 
 1. [Setup](#Setup)
     1. [Install Dependencies](#InstallDependencies)
@@ -108,6 +108,8 @@ ESP-IDF has an official extension for Visual Studio Code. To setup,
 		- IDF_PATH: C:\Espressif\frameworks\esp-idf-v5.4.1
 		- IDF_TOOLS_PATH: C\Espressif\tools
 		- Click install
+
+Use the buttons at the bottom of the IDE to build, flash & monitor the board. You may need to change the COM port (at the bottom of the IDE).
 
 
 #### JetBrains CLion <a name="JetBrainsCLion"></a>
