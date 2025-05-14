@@ -97,20 +97,9 @@ idf.py flash monitor
 Any IDE that supports CMake or has an ESP-IDF extension should be compatible with this project.
 
 #### Visual Studio Code <a name="VisualStudioCode"></a>
-ESP-IDF has an official extension for Visual Studio Code. To setup,
-1. Install the CMake Tools, Dev Containers and WSL extensions
-2. Install the ESP-IDF extension (author: Espressif Systems)
-3. A popup for the setup wizard will appear, click on it.
-4. In the setup wizard
-	- Select "Use Existing Setup"
-	- Select "Search ESP-IDF in System"
-	- If the installation cannot be found, select the following variables:
-		- IDF_PATH: C:\Espressif\frameworks\esp-idf-v5.4.1
-		- IDF_TOOLS_PATH: C\Espressif\tools
-		- Click install
+ESP-IDF has an official extension for Visual Studio Code. Install the CMake Tools, Dev Containers, WSL, and ESP-IDF extensions.
 
 Use the buttons at the bottom of the IDE to build, flash & monitor the board. You may need to change the COM port (at the bottom of the IDE).
-
 
 #### JetBrains CLion <a name="JetBrainsCLion"></a>
 CLion is compatible with this project. Follow [the tutorial on Espressif's site](https://developer.espressif.com/blog/clion/) with the following modifications:
