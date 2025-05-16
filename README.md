@@ -17,7 +17,7 @@
 ## Setup <a name="Setup"></a>
 **This project is currently setup to work with the ESP32, we will be using the ESP32-c6 in the future.**
 
-This project uses ESP-IDF version 5.4.
+This project uses ESP-IDF version 5.4. The Espressif docs have a [well written article](https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-guides/build-system.html) that explains the build system.
 
 ### Install Dependencies <a name="InstallDependencies"></a>
 #### MacOS <a name="MacOS1"></a>
