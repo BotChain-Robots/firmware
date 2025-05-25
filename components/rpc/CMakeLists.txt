@@ -1,3 +1,3 @@
-idf_component_register(SRCS "rpc.cpp" "TCPClient.cpp"
-                       PRIV_REQUIRES esp_netif
-                    INCLUDE_DIRS "include")
+idf_component_register(SRCS "rpc.cpp" "TCPServer.cpp" "WifiManager.cpp"
+                       PRIV_REQUIRES driver esp_event nvs_flash esp_netif esp_wifi
+                       INCLUDE_DIRS "include")
