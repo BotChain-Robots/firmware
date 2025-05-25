@@ -1,21 +1,26 @@
-#include <stdio.h>
-#include <inttypes.h>
+#include <cstdio>
+#include <cinttypes>
+#include <memory>
 
 #include "sdkconfig.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_chip_info.h"
 #include "esp_flash.h"
+#include "nvs_flash.h"
 
-extern "C" void app_main(void) {
+#include "WifiManager.h"
+
+extern "C" [[noreturn]] void app_main(void) {
+    nvs_flash_init();
+
+    const auto manager = std::make_unique<WifiManager>();
+    manager->init();
+
     printf("Hello world!\n");
 
-    for (int i = 10; i >= 0; i--) {
-        printf("Restarting in %d seconds...\n", i);
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+    for (int i = 0; ; i++) {
+        printf("Beat %d\n", i);
+        vTaskDelay(10000 / portTICK_PERIOD_MS);
     }
-
-    printf("Restarting now\n");
-    fflush(stdout);
-    esp_restart();
 }
