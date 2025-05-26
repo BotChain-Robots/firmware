@@ -15,9 +15,7 @@
 <hr>
 
 ## Setup <a name="Setup"></a>
-**This project is currently setup to work with the ESP32, we will be using the ESP32-c6 in the future.**
-
-This project uses ESP-IDF version 5.4. The Espressif docs have a [well written article](https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-guides/build-system.html) that explains the build system.
+**This project is currently setup to work with the ESP32-S3 board.** We use ESP-IDF version 5.4. The Espressif docs have a [well written article](https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-guides/build-system.html) that explains the build system.
 
 ### Install Dependencies <a name="InstallDependencies"></a>
 #### MacOS <a name="MacOS1"></a>
@@ -37,7 +35,7 @@ mkdir -p ~/esp
 cd ~/esp
 git clone --recursive https://github.com/espressif/esp-idf.git
 cd ~/esp/isp-idf
-./install.sh esp32
+./install.sh esp32,esp32s3
 ```
 
 #### Windows <a name="Windows1"></a>
@@ -45,6 +43,7 @@ Install ESP-IDF with with the GUI [Windows installer](https://dl.espressif.com/d
 - Use default options.
 - You may install ESP-IDF to a path that is different than the default, however, keep the length of the path under 90 characters and do not include any spaces or non ASCII characters. 
 - Select version v5.4.x.
+- Ensure that the `esp32s3` checkbox is selected (should be by default)
 - The installer will automatically provide
     - Embedded Python
     - Required cross compilers
@@ -105,4 +104,4 @@ Use the buttons at the bottom of the IDE to build, flash & monitor the board. Yo
 CLion is compatible with this project. Follow [the tutorial on Espressif's site](https://developer.espressif.com/blog/clion/) with the following modifications:
 - When asked to select a project, simply import the root directory of this repository (ie. the `firmware` folder).
 - If the `Open Project Wizard` does not open, access it via `Settings > Build, Execution, Deployment > CMake`.
-- When setting the `DIDF_TARGET`, do not use `esp32s3`, instead, use `-DIDF_TARGET=esp32`.
+- When setting the `DIDF_TARGET`, ensure you specify `esp32s3`.
