@@ -5,4 +5,8 @@
 #ifndef ICOMMUNICATIONROUTER_H
 #define ICOMMUNICATIONROUTER_H
 
+class ICommunicationRouter {
+
+}
+
 #endif //ICOMMUNICATIONROUTER_H
