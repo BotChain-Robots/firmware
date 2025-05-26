@@ -7,7 +7,7 @@
 
 class IWifiManager {
 public:
-    virtual ~IWifiManager() {};
+    virtual ~IWifiManager() = default;
     virtual int connect() = 0;
     virtual int disconnect() = 0;
 };
