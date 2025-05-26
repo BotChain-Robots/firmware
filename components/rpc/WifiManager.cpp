@@ -8,26 +8,17 @@
 #include "freertos/semphr.h"
 #include "esp_wifi.h"
 
-int WifiManager::init() {
+WifiManager::WifiManager() {
     esp_netif_init();
     esp_event_loop_create_default();
     esp_netif_create_default_wifi_sta();
 
-    printf("finished esp init");
-
     this->m_mutex = xSemaphoreCreateMutex();
-    this->m_state = wifi_state::connect;
+    this->m_state = wifi_state::disconnected;
     this->m_attempts = 0;
-
-    printf("finished variable init");
-
-    printf("lambda");
+    this->m_task = nullptr; // suppress warning
 
     xTaskCreate(reinterpret_cast<TaskFunction_t>(s_manage), "wifi_task", 4096, this, 5, &m_task);
-
-    printf("task create");
-
-    return 0;
 }
 
 int WifiManager::connect() {
@@ -51,25 +42,20 @@ int WifiManager::disconnect() {
 
         switch (state) {
             case wifi_state::connect:
-                printf("connect state\n");
                 init_connection();
                 update_state(wifi_state::connecting);
                 break;
             case wifi_state::connecting:
-                printf("connecting state\n");
                 handle_connecting();
                 break;
             case wifi_state::searching:
-                printf("searching state\n");
                 handle_search();
                 break;
             case wifi_state::disconnect:
-                printf("disconnect state\n");
                 handle_disconnect();
                 update_state(wifi_state::disconnected);
                 break;
             default:
-                printf("sleep state\n");
                 vTaskSuspend(nullptr);
                 break;
         }
@@ -128,6 +114,8 @@ int WifiManager::handle_disconnect() {
 }
 
 int WifiManager::handle_search() {
+    // todo: softap
+
     printf("Waiting for configuration");
     return 0;
 }

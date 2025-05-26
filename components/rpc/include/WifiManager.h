@@ -6,13 +6,14 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 
-class WifiManager {
+#include "IWifiManager.h"
+
+class WifiManager final : IWifiManager {
 public:
-  WifiManager() = default;
-  ~WifiManager() = default;
-  int init();
-  int connect();
-  int disconnect();
+  WifiManager();
+  ~WifiManager() override = default;
+  int connect() override;
+  int disconnect() override;
 
   [[noreturn]] void manage();
 
@@ -27,7 +28,6 @@ private:
   int handle_search();
 
   static void wifi_event_handler(void *event_handler_arg, esp_event_base_t event_base, int32_t event_id, void *event_data);
-
 
   SemaphoreHandle_t m_mutex;
   wifi_state m_state;
