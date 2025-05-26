@@ -5,4 +5,8 @@
 #ifndef IRPCSERVER_H
 #define IRPCSERVER_H
 
+class IRPCServer {
+
+}
+
 #endif //IRPCSERVER_H

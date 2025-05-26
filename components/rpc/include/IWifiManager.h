@@ -8,8 +8,8 @@
 class IWifiManager {
 public:
     virtual ~IWifiManager() {};
-    virtual int connect();
-    virtual int disconnect();
+    virtual int connect() = 0;
+    virtual int disconnect() = 0;
 };
 
 #endif //IWIFIMANAGER_H

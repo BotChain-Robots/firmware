@@ -7,7 +7,7 @@
 
 
 
-class CommunicationRouter {
+class CommunicationRouter : ICommunicationRouter {
 
 };
 

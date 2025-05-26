@@ -8,7 +8,6 @@
 #include "nvs_flash.h"
 
 #include "WifiManager.h"
-#include "IWifiManager.h"
 
 extern "C" [[noreturn]] void app_main(void) {
     nvs_flash_init();
