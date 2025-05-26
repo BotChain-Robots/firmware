@@ -1,21 +1,20 @@
 #include <cstdio>
-#include <cinttypes>
 #include <memory>
 
 #include "sdkconfig.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "esp_chip_info.h"
 #include "esp_flash.h"
 #include "nvs_flash.h"
 
 #include "WifiManager.h"
+#include "IWifiManager.h"
 
 extern "C" [[noreturn]] void app_main(void) {
     nvs_flash_init();
 
     const auto manager = std::make_unique<WifiManager>();
-    manager->init();
+    manager->connect();
 
     printf("Hello world!\n");
 
