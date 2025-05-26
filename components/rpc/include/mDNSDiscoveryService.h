@@ -5,8 +5,9 @@
 #ifndef DISCOVERYSERVICE_H
 #define DISCOVERYSERVICE_H
 
-class mDNSDiscoveryService : IDiscoveryService {
-
-}
+class mDNSDiscoveryService {
+public:
+    mDNSDiscoveryService();
+};
 
 #endif //DISCOVERYSERVICE_H

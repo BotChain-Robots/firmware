@@ -8,12 +8,15 @@
 #include "nvs_flash.h"
 
 #include "WifiManager.h"
+#include "mDNSDiscoveryService.h"
 
 extern "C" [[noreturn]] void app_main(void) {
     nvs_flash_init();
 
     const auto manager = std::make_unique<WifiManager>();
     manager->connect();
+
+    const auto discovery = std::make_unique<mDNSDiscoveryService>();
 
     printf("Hello world!\n");
 
