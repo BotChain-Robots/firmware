@@ -12,6 +12,7 @@
 
 WifiManager::WifiManager() {
     esp_netif_init();
+    esp_wifi_set_storage(WIFI_STORAGE_RAM);
     esp_event_loop_create_default();
 
     this->m_mutex = xSemaphoreCreateMutex();
@@ -98,15 +99,15 @@ int WifiManager::init_connection() {
     wifi_config_t wifi_configuration;
     wifi_configuration = {
         .sta = {
-            .ssid = "dlink-C32D",
+            .ssid = "",
             .password = "",
         }
     };
 
+    esp_wifi_set_mode(WIFI_MODE_STA);
     esp_wifi_set_config(static_cast<wifi_interface_t>(ESP_IF_WIFI_STA), &wifi_configuration);
 
     esp_wifi_start();
-    esp_wifi_set_mode(WIFI_MODE_STA);
     esp_wifi_connect();
 
     return 0;

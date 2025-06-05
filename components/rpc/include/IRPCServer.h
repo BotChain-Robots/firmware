@@ -7,6 +7,6 @@
 
 class IRPCServer {
 
-}
+};
 
 #endif //IRPCSERVER_H
