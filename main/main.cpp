@@ -9,6 +9,7 @@
 
 #include "WifiManager.h"
 #include "mDNSDiscoveryService.h"
+#include "TCPServer.h"
 
 extern "C" [[noreturn]] void app_main(void) {
     nvs_flash_init();
@@ -17,6 +18,10 @@ extern "C" [[noreturn]] void app_main(void) {
     manager->connect();
 
     const auto discovery = std::make_unique<mDNSDiscoveryService>();
+
+    vTaskDelay(20000 / portTICK_PERIOD_MS);
+
+    const auto tcp_server = std::make_unique<TCPServer>(3001);
 
     printf("Hello world!\n");
 

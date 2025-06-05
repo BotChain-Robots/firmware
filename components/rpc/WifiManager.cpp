@@ -98,7 +98,7 @@ int WifiManager::init_connection() {
     wifi_config_t wifi_configuration;
     wifi_configuration = {
         .sta = {
-            .ssid = "dlink-C32D",
+            .ssid = "",
             .password = "",
         }
     };
