@@ -123,6 +123,7 @@ TCPServer::~TCPServer() {
     auto that = static_cast<TCPServer *>(args);
 
     while (true) {
+        printf("top of loop\n");
         fd_set readfds;
         FD_ZERO(&readfds);
         int max_fd = -1;
@@ -139,6 +140,7 @@ TCPServer::~TCPServer() {
 
         if (ret > 0) {
             xSemaphoreTake(that->m_mutex, portMAX_DELAY);
+            std::vector<int> to_remove;
             for (int sock : that->m_clients) {
                 if (FD_ISSET(sock, &readfds)) {
                     // Handle socket
@@ -150,7 +152,7 @@ TCPServer::~TCPServer() {
                     } else if (0 == len) {
                         printf("Connection closed\n");
                         close(sock);
-                        that->m_clients.erase(sock);
+                        to_remove.emplace_back(sock);
                     } else {
                         // todo: send to rx queue
                         buffer[len] = 0; // temp: Null-terminate whatever is received and treat it like a string
@@ -158,6 +160,11 @@ TCPServer::~TCPServer() {
                     }
                 }
             }
+
+            for (const auto r : to_remove) {
+                that->m_clients.erase(r);
+            }
+
             xSemaphoreGive(that->m_mutex);
         }
     }
