@@ -4,24 +4,22 @@
 #include "sdkconfig.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "esp_flash.h"
-#include "nvs_flash.h"
 
 #include "WifiManager.h"
 #include "mDNSDiscoveryService.h"
 #include "TCPServer.h"
+#include "ConfigManager.h"
+#include "constants/tcp.h"
 
 extern "C" [[noreturn]] void app_main(void) {
-    nvs_flash_init();
+    ConfigManager::init_config();
 
     const auto manager = std::make_unique<WifiManager>();
     manager->connect();
 
     const auto discovery = std::make_unique<mDNSDiscoveryService>();
 
-    vTaskDelay(20000 / portTICK_PERIOD_MS);
-
-    const auto tcp_server = std::make_unique<TCPServer>(3001);
+    const auto tcp_server = std::make_unique<TCPServer>(TCP_PORT);
 
     printf("Hello world!\n");
 
