@@ -123,7 +123,6 @@ TCPServer::~TCPServer() {
     auto that = static_cast<TCPServer *>(args);
 
     while (true) {
-        printf("top of loop\n");
         fd_set readfds;
         FD_ZERO(&readfds);
         int max_fd = -1;

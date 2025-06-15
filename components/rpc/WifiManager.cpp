@@ -12,6 +12,7 @@
 
 WifiManager::WifiManager() {
     esp_netif_init();
+    esp_wifi_set_storage(WIFI_STORAGE_RAM);
     esp_event_loop_create_default();
 
     this->m_mutex = xSemaphoreCreateMutex();
