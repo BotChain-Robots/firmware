@@ -18,13 +18,12 @@
 
 // todo: - add message routing to correct client
 //       - authenticate (don't just return true from the auth function)
+//       - tx from board
 
 TCPServer::TCPServer(const int port) {
     this->m_port = port;
     this->m_mutex = xSemaphoreCreateMutex();
     this->m_clients = std::unordered_set<int>();
-
-
     this->m_task = nullptr;
     this->m_rx_task = nullptr;
     this->m_tx_task = nullptr;
@@ -153,7 +152,7 @@ TCPServer::~TCPServer() {
                         close(sock);
                         to_remove.emplace_back(sock);
                     } else {
-                        // todo: send to rx queue
+                        // todo: send to rx queue instead of printing
                         buffer[len] = 0; // temp: Null-terminate whatever is received and treat it like a string
                         printf("TCP Server Received %d bytes: %s\n", len, buffer);
                     }

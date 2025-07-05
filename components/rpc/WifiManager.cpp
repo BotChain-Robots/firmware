@@ -104,10 +104,10 @@ int WifiManager::init_connection() {
         }
     };
 
+    esp_wifi_set_mode(WIFI_MODE_STA);
     esp_wifi_set_config(static_cast<wifi_interface_t>(ESP_IF_WIFI_STA), &wifi_configuration);
 
     esp_wifi_start();
-    esp_wifi_set_mode(WIFI_MODE_STA);
     esp_wifi_connect();
 
     return 0;

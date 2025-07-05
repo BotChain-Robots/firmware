@@ -14,12 +14,12 @@ void ConfigManager::init_config() {
     nvs_open(NVS_FLASH_NAMESPACE, NVS_READWRITE, &config_handle);
 
     uint16_t id;
-    if (ESP_ERR_NVS_NOT_FOUND == nvs_get_u16(config_handle, "id", &id)) {
+    if (ESP_ERR_NVS_NOT_FOUND == nvs_get_u16(config_handle, MODULE_ID_KEY, &id)) {
         nvs_set_u16(config_handle, MODULE_ID_KEY, DEFAULT_MODULE_ID);
     }
 
     uint16_t type;
-    if (ESP_ERR_NVS_NOT_FOUND == nvs_get_u16(config_handle, "id", &type)) {
+    if (ESP_ERR_NVS_NOT_FOUND == nvs_get_u16(config_handle, MODULE_TYPE_KEY, &type)) {
         nvs_set_u16(config_handle, MODULE_TYPE_KEY, DEFAULT_MODULE_TYPE);
     }
 

@@ -5,9 +5,12 @@
 #ifndef DISCOVERYSERVICE_H
 #define DISCOVERYSERVICE_H
 
-class mDNSDiscoveryService {
+class mDNSDiscoveryService final {
 public:
-    mDNSDiscoveryService();
+    mDNSDiscoveryService() = delete;
+    ~mDNSDiscoveryService() = delete;
+
+    static void setup();
 };
 
 #endif //DISCOVERYSERVICE_H

@@ -17,7 +17,7 @@ extern "C" [[noreturn]] void app_main(void) {
     const auto manager = std::make_unique<WifiManager>();
     manager->connect();
 
-    const auto discovery = std::make_unique<mDNSDiscoveryService>();
+    mDNSDiscoveryService::setup();
 
     const auto tcp_server = std::make_unique<TCPServer>(TCP_PORT);
 
