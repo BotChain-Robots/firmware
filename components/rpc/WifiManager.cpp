@@ -21,7 +21,7 @@ WifiManager::WifiManager() {
     this->m_task = nullptr;
     this->m_netif = nullptr;
 
-    xTaskCreate(reinterpret_cast<TaskFunction_t>(s_manage), "wifi_task", 4096, this, 5, &m_task);
+    xTaskCreate(reinterpret_cast<TaskFunction_t>(s_manage), "wifi_task", 3096, this, 5, &m_task);
 }
 
 WifiManager::~WifiManager() {

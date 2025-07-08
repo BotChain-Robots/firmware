@@ -11,6 +11,7 @@
 #include "TCPServer.h"
 #include "ConfigManager.h"
 #include "constants/tcp.h"
+#include "LoopManager.h"
 
 extern "C" [[noreturn]] void app_main(void) {
     ConfigManager::init_config();
@@ -20,12 +21,5 @@ extern "C" [[noreturn]] void app_main(void) {
 
     mDNSDiscoveryService::setup();
 
-    const auto tcp_server = std::make_unique<TCPServer>(TCP_PORT);
-
-    printf("Hello world!\n");
-
-    for (int i = 0; ; i++) {
-        printf("Beat %d\n", i);
-        vTaskDelay(10000 / portTICK_PERIOD_MS);
-    }
+    LoopManager::control_loop();
 }

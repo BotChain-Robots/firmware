@@ -14,7 +14,7 @@
 
 class TCPServer : IRPCServer {
 public:
-    explicit TCPServer(int port);
+    TCPServer(int port, QueueHandle_t rx_queue);
     ~TCPServer();
 
 private:
@@ -30,6 +30,8 @@ private:
     TaskHandle_t m_task;
     TaskHandle_t m_rx_task;
     TaskHandle_t m_tx_task;
+
+    QueueHandle_t m_rx_queue;
 
     SemaphoreHandle_t m_mutex;
     std::unordered_set<int> m_clients;
