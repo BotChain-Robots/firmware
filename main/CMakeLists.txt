@@ -1,5 +1,5 @@
 idf_component_register(SRCS "main.cpp" "LoopManager.cpp"
-                       PRIV_REQUIRES spi_flash nvs_flash esp_event rpc constants config rmt esp_driver_gptimer dataLink flatbuffers
+                       PRIV_REQUIRES esp_psram spi_flash nvs_flash esp_event rpc constants config rmt esp_driver_gptimer dataLink flatbuffers
                        INCLUDE_DIRS "")
 
 if(DEFINED BOARD_NAME AND BOARD_NAME)
