@@ -1,6 +1,8 @@
 #include "CommunicationRouter.h"
 
 #include <iostream>
+#include "freertos/FreeRTOS.h"
+#include "freertos/queue.h"
 
 CommunicationRouter::~CommunicationRouter() {
     vQueueDelete(m_tcp_rx_queue);

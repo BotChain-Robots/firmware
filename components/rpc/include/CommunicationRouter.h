@@ -8,6 +8,9 @@
 #include <functional>
 #include <memory>
 
+#include "freertos/FreeRTOS.h"
+#include "freertos/queue.h"
+
 #include "TCPServer.h"
 #include "constants/tcp.h"
 #include "constants/app_comms.h"

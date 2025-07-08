@@ -8,7 +8,6 @@
 #include "driver/rmt_tx.h"
 #include "driver/rmt_rx.h"
 
-#include "soc/gpio_num.h"
 #include "RMTSymbols.h"
 
 #include <cstring>
