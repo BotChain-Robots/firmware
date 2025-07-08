@@ -20,15 +20,17 @@
 //       - authenticate (don't just return true from the auth function)
 //       - tx from board
 
-TCPServer::TCPServer(const int port) {
+TCPServer::TCPServer(const int port, QueueHandle_t rx_queue) {
     this->m_port = port;
     this->m_mutex = xSemaphoreCreateMutex();
     this->m_clients = std::unordered_set<int>();
     this->m_task = nullptr;
     this->m_rx_task = nullptr;
     this->m_tx_task = nullptr;
+    this->m_rx_queue = rx_queue;
+    this->m_server_sock = 0;
 
-    xTaskCreate(tcp_server_task, "tcp_accept_server", 4096, this, 5, &this->m_task);
+    xTaskCreate(tcp_server_task, "tcp_accept_server", 2048, this, 5, &this->m_task);
     xTaskCreate(socket_monitor_thread, "tcp_rx", 4096, this, 5, &this->m_rx_task);
 }
 
@@ -45,7 +47,7 @@ TCPServer::~TCPServer() {
     constexpr int keepInterval = KEEPALIVE_INTERVAL;
     constexpr int keepCount = KEEPALIVE_COUNT;
 
-    auto that = static_cast<TCPServer*>(args);
+    const auto that = static_cast<TCPServer*>(args);
 
     while (true) {
         printf("Attempting to start TCP Server on port %d", that->m_port);
@@ -119,7 +121,7 @@ TCPServer::~TCPServer() {
 }
 
 [[noreturn]] void TCPServer::socket_monitor_thread(void *args) {
-    auto that = static_cast<TCPServer *>(args);
+    const auto that = static_cast<TCPServer *>(args);
 
     while (true) {
         fd_set readfds;
@@ -152,9 +154,8 @@ TCPServer::~TCPServer() {
                         close(sock);
                         to_remove.emplace_back(sock);
                     } else {
-                        // todo: send to rx queue instead of printing
-                        buffer[len] = 0; // temp: Null-terminate whatever is received and treat it like a string
-                        printf("TCP Server Received %d bytes: %s\n", len, buffer);
+                        printf("TCP Server Received %d bytes\n", len);
+                        xQueueSendToBack(that->m_rx_queue, buffer, 0);
                     }
                 }
             }
