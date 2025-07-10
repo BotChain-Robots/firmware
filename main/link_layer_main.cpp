@@ -17,6 +17,8 @@
 #include "driver/gptimer.h"
 #include "esp_log.h"
 
+#define DATA_SIZE_TEST 270
+
 struct TaskArgs{
     DataLinkManager* link_layer_obj;
     uint8_t task_id;
@@ -46,8 +48,8 @@ void receive_frames(void* arg){
     printf("RX JOB for task %d starting...\n", curr_channel);
     esp_err_t res;
 
-    uint8_t recv_buf[256];
-    memset(recv_buf, 0, 256);
+    uint8_t recv_buf[DATA_SIZE_TEST];
+    memset(recv_buf, 0, DATA_SIZE_TEST);
     size_t recv_len = 0;
 
     ReceviedFrame recv_frame = {};
@@ -101,10 +103,10 @@ void multi_transceiver(void* arg) {
     QueueHandle_t shared_queue = (QueueHandle_t)args->receive_queue;
     
     
-    uint8_t send_buf[256];
-    uint8_t recv_buf[256];
-    memset(recv_buf, 0, 256);
-    memset(send_buf, 0, 256);
+    uint8_t send_buf[DATA_SIZE_TEST];
+    uint8_t recv_buf[DATA_SIZE_TEST];
+    memset(recv_buf, 0, DATA_SIZE_TEST);
+    memset(send_buf, 0, DATA_SIZE_TEST);
     
     size_t recv_len = 0;
     uint8_t iteration = 0;
@@ -126,24 +128,25 @@ void multi_transceiver(void* arg) {
     
     ReceviedFrame recv_frame = {};
     printf("task %d starting...\n", curr_channel);
+    vTaskDelay(3000 /    portTICK_PERIOD_MS);
 
-    while(true){
-        vTaskDelay(1000 /    portTICK_PERIOD_MS); // wait 1 second before trying to send again
+    while(1){
+        // vTaskDelay(1000 /    portTICK_PERIOD_MS); // wait 1 second before trying to send again
 
-        snprintf(reinterpret_cast<char*>(send_buf), sizeof(send_buf), "%s %d CH. %d", message, iteration, curr_channel);
+        // snprintf(reinterpret_cast<char*>(send_buf), sizeof(send_buf), "%s %d CH. %d", message, iteration, curr_channel);
         
-        ESP_ERROR_CHECK(gptimer_get_raw_count(gptimer, &start_count));
-        res = obj->send(dest_board_id, send_buf, strlen(reinterpret_cast<char*>(send_buf)), FrameType::DEBUG_CONTROL_TYPE, curr_channel);
-        ESP_ERROR_CHECK(gptimer_get_raw_count(gptimer, &end_count));
+        // ESP_ERROR_CHECK(gptimer_get_raw_count(gptimer, &start_count));
+        // res = obj->send(dest_board_id, send_buf, strlen(reinterpret_cast<char*>(send_buf)), FrameType::DEBUG_CONTROL_TYPE, curr_channel);
+        // ESP_ERROR_CHECK(gptimer_get_raw_count(gptimer, &end_count));
 
-        snprintf(reinterpret_cast<char*>(send_buf), sizeof(send_buf), "%s RANDOM", message); //modifying the data while it transmits shouldn't affect the actual transmission here
+        // snprintf(reinterpret_cast<char*>(send_buf), sizeof(send_buf), "%s RANDOM", message); //modifying the data while it transmits shouldn't affect the actual transmission here
         
-        if (res != ESP_OK){
-            ESP_LOGE("thread", "Failed to send message on thread %d", curr_channel);
-        } else {
-            printf("Successfully sent message\n");
-            // printf("Sent %zu B sized in %" PRIu64 " us\n", strlen(reinterpret_cast<char*>(send_buf)) + CONTROL_FRAME_OVERHEAD, end_count-start_count);
-        }
+        // if (res != ESP_OK){
+        //     ESP_LOGE("thread", "Failed to send message on thread %d", curr_channel);
+        // } else {
+        //     printf("Successfully sent message\n");
+        //     // printf("Sent %zu B sized in %" PRIu64 " us\n", strlen(reinterpret_cast<char*>(send_buf)) + CONTROL_FRAME_OVERHEAD, end_count-start_count);
+        // }
         
         //wait on a queue for a few ms (if there's nothing, just send another frame. otherwise pop from queue and read it)
         if (xQueueReceive(shared_queue, (void*)&recv_frame, (TickType_t) 50) != pdPASS){
@@ -169,8 +172,12 @@ void multi_transceiver(void* arg) {
         
         // vTaskDelay(1000 /    portTICK_PERIOD_MS); // wait 1 second before trying to send again
         //reset temp buffers
-        memset(recv_buf, 0, 256);
-        memset(send_buf, 0, 256);
+        memset(recv_buf, 0, DATA_SIZE_TEST);
+        memset(send_buf, 0, DATA_SIZE_TEST);
+    }
+
+    while(true){
+        vTaskDelay(2000 / portTICK_PERIOD_MS);
     }
 
 }
@@ -207,9 +214,9 @@ extern "C" [[noreturn]] void app_main(void) {
     
     // uint8_t iteration = 0;
     // const char* message = "THIS IS A TEXT MESSAGE";
-    
+    uint8_t num_channels = 1;
     uint8_t board_id = 69;
-    std::unique_ptr<DataLinkManager> obj = std::make_unique<DataLinkManager>(board_id);
+    std::unique_ptr<DataLinkManager> obj = std::make_unique<DataLinkManager>(board_id, num_channels);
     
     // uint8_t dest_board_id = 2; //using a dummy number for now - there is no board with id 2 right now
     
@@ -225,10 +232,10 @@ extern "C" [[noreturn]] void app_main(void) {
     
     TaskArgs args[4] = {};
 
-    for (uint8_t i = 0; i < MAX_CHANNELS; i++){
+    for (uint8_t i = 0; i < num_channels; i++){
         args[i].link_layer_obj = obj_to_send;
         args[i].task_id = i;
-        args[i].receiver_id = i+1;
+        args[i].receiver_id = 1;
         args[i].receive_queue = xQueueCreate(10, sizeof(ReceviedFrame)); //queue storing up to 10 control frames
         xTaskCreate(multi_transceiver, "multi_transceiver", 4096, static_cast<void*>(&args[i]), 5, NULL);
         vTaskDelay(500 / portTICK_PERIOD_MS);

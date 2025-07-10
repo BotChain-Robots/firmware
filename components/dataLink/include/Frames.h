@@ -9,8 +9,8 @@
 
 #define START_OF_FRAME 0xAB //0b1010_1011 - denotes the start of frame
 
-#define MAX_GENERIC_DATA_LEN (180) //Max 180B
-#define MAX_CONTROL_DATA_LEN (1 << 5) // Max 32B
+#define MAX_GENERIC_DATA_LEN (1 << 16) //Max 65.5KiB
+#define MAX_CONTROL_DATA_LEN (1 << 8) // Max 256B
 
 //Flags
 #define FLAG_FRAG 0x8 //0b1000 //this fragmented frame is part of a larger frame
@@ -24,6 +24,7 @@
 #define IS_CONTROL_FRAME(x) (((x) & 0x80) != 0)
 
 #define CONTROL_FRAME_OVERHEAD 9
+#define GENERIC_FRAME_OVERHEAD 12
 
 #define CONTROL_FRAME_TYPE 0x80 //if the frame type MSB is set to 1, use the control frame
 //Types (total 2^4 = 16 different types)
@@ -45,10 +46,10 @@ typedef struct _control_frame{
     uint8_t receiver_id; //receiver board id
     uint16_t seq_num; //sequence number to differentiate frames being sent from sender to receiver
     uint8_t type_flag; //(type << 4) | flag - both are 4 bits
-    uint8_t data_len; //Data Length (max 32B)
+    uint16_t data_len; //Data Length (max 256B)
     uint8_t data[MAX_CONTROL_DATA_LEN]; //Variable Length of Data
     uint16_t crc_16; //CRC-16
-} control_frame; //this will have a max size of 9 + 32B = 41B
+} control_frame; //this will have a max size of 9 + 256B = 265B
 
 typedef struct _data_link_frame{
     uint8_t preamble; //Start of Frame
@@ -60,39 +61,17 @@ typedef struct _data_link_frame{
     uint16_t data_len; //Data Length (max 178B)
     uint8_t data[MAX_GENERIC_DATA_LEN]; //Variable Length of Data
     uint16_t crc_16; //CRC-16
-} data_link_frame; //this will have a max size of 12 + 180 B = 192B
+} data_link_frame; //this will have a max size of ~65.5KiB
 #pragma pack(pop)
 
-using Frame = std::variant<control_frame, data_link_frame>;
-
-//defining a comparison operation for comparing two frames -- not tested
-struct FrameCompare {
-    bool operator()(const Frame& a, const Frame& b) const {
-        auto msb_set = [](uint8_t type_flag) {
-            return (type_flag & 0x80) != 0; // 0x80 == 1000 0000
-        };
-
-        auto get_type_flag = [](const Frame& pkt) -> uint8_t {
-            return std::visit([](auto&& p) -> uint8_t {
-                return p.type_flag;
-            }, pkt);
-        };
-
-        uint8_t type_flag_a = get_type_flag(a);
-        uint8_t type_flag_b = get_type_flag(b);
-
-        bool a_msb = msb_set(type_flag_a);
-        bool b_msb = msb_set(type_flag_b);
-
-        if (a_msb != b_msb) {
-            return !a_msb; // Frame with MSB set (true) should come first
-        }
-
-        // Tie-breaker: use seq_num if MSB is the same
-        return std::visit([](auto&& p1, auto&& p2) {
-            return p1.seq_num > p2.seq_num; // smaller seq_num = higher priority (older)
-        }, a, b);
-    }
-};
-
+typedef struct _header{
+    uint8_t preamble; //Start of Frame
+    uint8_t sender_id; //sender board id
+    uint8_t receiver_id; //receiver board id
+    uint16_t seq_num; //sequence number to differentiate frames being sent from sender to receiver
+    uint8_t type_flag; //(type << 4) | flag - both are 4 bits
+    uint16_t frag_info; //(total_frag_num << 8) | frag_num - total_frag_num denotes the total number of fragmented frames to expect for this sequence number(?) and frag_num denotes the fragment frame  num
+    uint16_t data_len; //Data Length (max 178B)
+    uint16_t crc_16; //CRC-16
+} frame_header;
 #endif //DATA_LINK
