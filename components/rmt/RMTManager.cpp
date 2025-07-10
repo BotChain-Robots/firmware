@@ -7,22 +7,31 @@
 #include "freertos/semphr.h"
 #include "esp_log.h"
 
-RMTManager::RMTManager(){
+/**
+ * @brief Construct a new RMTManager::RMTManager object
+ * 
+ * @param num_channels Number of channels to init (1-4) inclusive
+ */
+RMTManager::RMTManager(uint8_t num_channels = MAX_CHANNELS){
+    if (num_channels > MAX_CHANNELS || num_channels == 0){
+        ESP_LOGE(DEBUG_TAG, "Invalid number of channels to init");
+        return;
+    }
+    this->num_channels = num_channels;
     esp_err_t res = init();
     if (res != ESP_OK){
         //failed
         ESP_LOGE(DEBUG_TAG, "Failed to initialize the RMTManager");
         return;
     }
-    ESP_LOGD(DEBUG_TAG, "RMTManager has been initialized");
+    ESP_LOGI(DEBUG_TAG, "RMTManager has been initialized");
 }
 
 esp_err_t RMTManager::init_tx_channel(){
     esp_err_t res_tx = ESP_FAIL;
 
-    //setup encoder config
-    
-    for (uint8_t i = 0; i < MAX_CHANNELS; i++){
+    for (uint8_t i = 0; i < num_channels; i++){
+        //setup encoder config
         reset_encoder_context(&channels[i].encoder_context); //ensure the encoder context is initialized
         rmt_simple_encoder_config_t encoder_config = {
             .callback = encoder_callback,
@@ -118,7 +127,7 @@ esp_err_t RMTManager::init_tx_channel(){
             continue;
         }
 
-        printf("Successfully enabled TX channel %d\n", i);
+        ESP_LOGI(DEBUG_TAG, "Successfully enabled TX channel %d", i);
     }
 
     return ESP_OK;
@@ -155,7 +164,7 @@ bool RMTManager::rmt_tx_done_callback(rmt_channel_handle_t channel, const rmt_tx
 }
 
 esp_err_t RMTManager::wait_until_send_complete(uint8_t channel_num){
-    if (channel_num >= MAX_CHANNELS){
+    if (channel_num >= num_channels){
         ESP_LOGE(DEBUG_TAG, "Invalid channel number");
         return ESP_FAIL;
     }
@@ -186,7 +195,7 @@ bool RMTManager::rmt_rx_done_callback(rmt_channel_handle_t channel, const rmt_rx
 }
 
 esp_err_t RMTManager::init_rx_channel(){
-    for (uint8_t i = 0; i < MAX_CHANNELS; i++){
+    for (uint8_t i = 0; i < num_channels; i++){
         rmt_rx_channel_config_t rx_channel_config = {
             .gpio_num = rx_gpio[i],
             .clk_src = RMT_CLK_SRC_DEFAULT,
@@ -229,6 +238,8 @@ esp_err_t RMTManager::init_rx_channel(){
             ESP_LOGE(DEBUG_TAG, "Failed to enable RX channel");
             return ESP_FAIL;
         }
+
+        ESP_LOGI(DEBUG_TAG, "Enabled RX Channel %d", i);
     }
 
     return ESP_OK;
@@ -250,7 +261,7 @@ esp_err_t RMTManager::init(){
         return ESP_FAIL;
     }
 
-    for (uint8_t i = 0; i < MAX_CHANNELS; i++){
+    for (uint8_t i = 0; i < num_channels; i++){
         if (channels[i].tx_rmt_handle != NULL && channels[i].rx_rmt_handle != NULL && channels[i].tx_done_semaphore != NULL && channels[i].rx_queue != NULL){
             channels[i].status = CHANNEL_READY_STATUS;
         }
@@ -371,13 +382,15 @@ void RMTManager::reset_encoder_context(rmt_encoder_context_t* ctx){
  * @param config 
  * @return int 
  */
-int RMTManager::send(uint8_t* data, size_t size, rmt_transmit_config_t* config, uint8_t channel_num){
-    if (channel_num >= MAX_CHANNELS){
+esp_err_t RMTManager::send(uint8_t* data, size_t size, rmt_transmit_config_t* config, uint8_t channel_num){
+    if (channel_num >= num_channels){
         ESP_LOGE(DEBUG_TAG, "send() error: invalid channel number");
+        return ESP_FAIL;
     }
 
     if (channels[channel_num].status == CHANNEL_NOT_READY_STATUS){
         ESP_LOGE(DEBUG_TAG, "send() error: Channel %d is not ready", channel_num);
+        return ESP_FAIL;
     }
 
     if (this->channels[channel_num].tx_rmt_handle == nullptr) {
@@ -638,7 +651,7 @@ int RMTManager::convert_symbols_to_char(rmt_symbol_word_t* symbols, size_t num, 
  * @return esp_err_t 
  */
 esp_err_t RMTManager::start_receiving(uint8_t channel_num){
-    if (channel_num >= MAX_CHANNELS){
+    if (channel_num >= num_channels){
         return ESP_FAIL;
     }
 
@@ -673,8 +686,8 @@ esp_err_t RMTManager::start_receiving(uint8_t channel_num){
  * 
  * @return int 
  */
-int RMTManager::receive(uint8_t* recv_buf, size_t size, size_t* output_size, uint8_t channel_num){
-    if (channel_num >= MAX_CHANNELS){
+esp_err_t RMTManager::receive(uint8_t* recv_buf, size_t size, size_t* output_size, uint8_t channel_num){
+    if (channel_num >= num_channels){
         return ESP_FAIL;
     }
 
@@ -717,7 +730,7 @@ int RMTManager::receive(uint8_t* recv_buf, size_t size, size_t* output_size, uin
 }
 
 RMTManager::~RMTManager(){
-    for (uint8_t i = 0; i < MAX_CHANNELS; i++){
+    for (uint8_t i = 0; i < num_channels; i++){
         if (this->channels[i].tx_rmt_handle) {
             rmt_disable(this->channels[i].tx_rmt_handle);
             rmt_del_channel(this->channels[i].tx_rmt_handle);

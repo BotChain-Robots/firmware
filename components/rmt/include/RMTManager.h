@@ -8,6 +8,7 @@
 #include "driver/rmt_tx.h"
 #include "driver/rmt_rx.h"
 
+#include "soc/gpio_num.h"
 #include "RMTSymbols.h"
 
 #include <cstring>
@@ -61,10 +62,10 @@ typedef struct _rmt_channel{
 
 class RMTManager{
     public:
-        RMTManager();
+        RMTManager(uint8_t num_channels);
         ~RMTManager();
-        int send(uint8_t* data, size_t size, rmt_transmit_config_t* config, uint8_t channel_num); //temp function to send some string data
-        int receive(uint8_t* recv_buf, size_t size, size_t* output_size, uint8_t channel_num);
+        esp_err_t send(uint8_t* data, size_t size, rmt_transmit_config_t* config, uint8_t channel_num); //temp function to send some string data
+        esp_err_t receive(uint8_t* recv_buf, size_t size, size_t* output_size, uint8_t channel_num);
 
         static size_t encoder_callback(const void* data, size_t data_size, size_t symbols_written, 
             size_t symbols_free, rmt_symbol_word_t* symbols, bool* done, void* arg);
@@ -77,6 +78,7 @@ class RMTManager{
         esp_err_t wait_until_send_complete(uint8_t channel_num);
         
     private:
+        uint8_t num_channels; //number of channels initalized
         esp_err_t init();
         void reset_encoder_context(rmt_encoder_context_t* ctx);
         esp_err_t init_tx_channel();

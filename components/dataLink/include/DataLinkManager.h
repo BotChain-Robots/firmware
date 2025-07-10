@@ -39,7 +39,7 @@ static const uint16_t crc16_table[256] = {
 
 class DataLinkManager{
     public:
-        DataLinkManager(uint8_t board_id);
+        DataLinkManager(uint8_t board_id, uint8_t num_channels);
         ~DataLinkManager();
         esp_err_t send(uint8_t dest_board, uint8_t* data, uint16_t data_len, FrameType type, uint8_t curr_channel);
         esp_err_t start_receive_frames(uint8_t curr_channel);
@@ -48,7 +48,8 @@ class DataLinkManager{
         esp_err_t send_discover_frame();
     private:
         uint8_t this_board_id = 0;
-        std::priority_queue<Frame, std::vector<Frame>, FrameCompare> frame_queue; //create a priority queue
+        uint8_t num_channels = MAX_CHANNELS;
+        //std::priority_queue<Frame, std::vector<Frame>, FrameCompare> frame_queue; //create a priority queue - not in use
         std::unique_ptr<RMTManager> phys_comms;
         std::unordered_map<uint8_t, uint16_t> sequence_num_map;
         
@@ -56,7 +57,7 @@ class DataLinkManager{
         esp_err_t get_board_id(uint8_t& board_id);
         void print_binary(uint8_t byte);
         void print_buffer_binary(const uint8_t* buffer, size_t length);
-        esp_err_t get_data_from_frame(uint8_t* data, size_t data_len, uint8_t* message, size_t* message_size);
+        esp_err_t get_data_from_frame(uint8_t* data, size_t data_len, uint8_t* message, size_t* message_size, frame_header* header);
         esp_err_t geneate_crc_16(uint8_t* data, size_t data_len, uint16_t* crc);
         
         //==== RIP related functions ====
@@ -69,7 +70,7 @@ class DataLinkManager{
          */
 
         void init_rip();
-        esp_err_t rip_find_entry(uint8_t board_id, RIPRow** entry);
+        esp_err_t rip_find_entry(uint8_t board_id, RIPRow** entry, bool reserve_row);
         esp_err_t rip_update_entry(uint8_t new_hop, uint8_t channel, RIPRow** entry);
         esp_err_t rip_add_entry(uint8_t board_id, uint8_t hops, uint8_t channel, RIPRow** entry);
         esp_err_t rip_reset_entry_ttl(uint8_t board_id);
@@ -77,13 +78,12 @@ class DataLinkManager{
         //this is stored locally with metadata `ttl`
         // std::unordered_map<uint8_t, RIPRow> rip_table; //using a hash map to store the routes to other boards - will be used as we scale up
         RIPRow rip_table[RIP_MAX_ROUTES]; //temp using a static array
-
-        uint8_t rip_table_valid_rows = 0;
         
         void start_rip_tasks();
-        esp_err_t broadcast_rip_frame(); 
+        esp_err_t broadcast_rip_frame(bool manual_broadcast); 
         [[noreturn]] static void rip_broadcast_timer_function(void* args);
         [[noreturn]] static void rip_ttl_decrement_task(void* args);
+        QueueHandle_t manual_broadcasts;
         
         esp_err_t route_frame(uint8_t dest_id, uint8_t* channel_to_send);
 };
