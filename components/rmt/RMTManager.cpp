@@ -440,7 +440,6 @@ esp_err_t RMTManager::send(uint8_t* data, size_t size, rmt_transmit_config_t* co
         ESP_LOGE(DEBUG_TAG, "Failed to send %s", data);
         return ESP_FAIL;
     }
-    
     return ESP_OK;
 }
 
