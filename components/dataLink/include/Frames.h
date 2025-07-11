@@ -20,7 +20,7 @@
 
 #define GET_TYPE(x) ((x) & 0xF0)
 #define GET_FLAG(x) ((x) & 0x0F)
-#define MAKE_TYPE_FLAG(type, flag) ((type) | (flag))
+#define MAKE_TYPE_FLAG(type, flag) ((uint8_t)((type & 0xF0) | (flag & 0xF)))
 #define IS_CONTROL_FRAME(x) (((x) & 0x80) != 0)
 
 #define CONTROL_FRAME_OVERHEAD 9

@@ -41,11 +41,12 @@ class DataLinkManager{
     public:
         DataLinkManager(uint8_t board_id, uint8_t num_channels);
         ~DataLinkManager();
-        esp_err_t send(uint8_t dest_board, uint8_t* data, uint16_t data_len, FrameType type, uint8_t curr_channel);
+        esp_err_t send(uint8_t dest_board, uint8_t* data, uint16_t data_len, FrameType type, uint8_t flag);
         esp_err_t start_receive_frames(uint8_t curr_channel);
         esp_err_t receive(uint8_t* data, size_t data_len, size_t* recv_len, uint8_t curr_channel);
         esp_err_t print_frame_info(uint8_t* data, size_t data_len, uint8_t* message);
-        esp_err_t send_discover_frame();
+        esp_err_t get_network_toplogy(RIPRow_public_matrix* matrix, size_t* matrix_size);
+        esp_err_t get_routing_table(RIPRow_public* table, size_t* table_size);
     private:
         uint8_t this_board_id = 0;
         uint8_t num_channels = MAX_CHANNELS;
@@ -80,10 +81,12 @@ class DataLinkManager{
         RIPRow rip_table[RIP_MAX_ROUTES]; //temp using a static array
         
         void start_rip_tasks();
-        esp_err_t broadcast_rip_frame(bool manual_broadcast); 
+        esp_err_t send_rip_frame(bool broadcast, uint8_t dest_id); 
         [[noreturn]] static void rip_broadcast_timer_function(void* args);
         [[noreturn]] static void rip_ttl_decrement_task(void* args);
         QueueHandle_t manual_broadcasts;
+
+        QueueHandle_t discovery_tables;
         
         esp_err_t route_frame(uint8_t dest_id, uint8_t* channel_to_send);
 };

@@ -103,7 +103,7 @@ esp_err_t DataLinkManager::get_board_id(uint8_t& board_id){
  * @param type 
  * @return esp_err_t 
  */
-esp_err_t DataLinkManager::send(uint8_t dest_board, uint8_t* data, uint16_t data_len, FrameType type, uint8_t curr_channel){
+esp_err_t DataLinkManager::send(uint8_t dest_board, uint8_t* data, uint16_t data_len, FrameType type, uint8_t flag){
     if (phys_comms == nullptr){
         ESP_LOGE(DEBUG_LINK_TAG, "Failed to send frame due to no RMT object");
         return ESP_FAIL;
@@ -116,10 +116,6 @@ esp_err_t DataLinkManager::send(uint8_t dest_board, uint8_t* data, uint16_t data
 
     if (this_board_id == PC_ADDR){
         ESP_LOGE(DEBUG_LINK_TAG, "This board is not assigned a board id");
-        return ESP_FAIL;
-    }
-    
-    if (curr_channel >= num_channels){
         return ESP_FAIL;
     }
 
@@ -137,11 +133,12 @@ esp_err_t DataLinkManager::send(uint8_t dest_board, uint8_t* data, uint16_t data
             .sender_id = this_board_id,
             .receiver_id = dest_board,
             .seq_num = sequence_num_map[dest_board]++,
-            .type_flag = static_cast<uint8_t>(type),
+            .type_flag = (uint8_t)((static_cast<uint8_t>(type) & 0xF0) | (flag & 0xF)),
             .data_len = static_cast<uint8_t>(data_len),
             .crc_16 = 0, //not made yet
         };
 
+        ESP_LOGI(DEBUG_LINK_TAG, "type flag %X\n", new_frame.type_flag);
         // printf("size of control frame %d\n", sizeof(control_frame));
         // printf("size of message %d\n", new_frame.data_len);
         // printf("message %s\n", data);
@@ -184,7 +181,10 @@ esp_err_t DataLinkManager::send(uint8_t dest_board, uint8_t* data, uint16_t data
 
         uint8_t channel_to_route = MAX_CHANNELS;
         if (new_frame.receiver_id == BROADCAST_ADDR){
-            channel_to_route = curr_channel;
+            for (uint8_t i = 0; i < num_channels; i++){
+                phys_comms->send(send_data, offset, &config, i);
+            }
+
         } else {
             res = route_frame(new_frame.receiver_id, &channel_to_route);
     
@@ -192,8 +192,8 @@ esp_err_t DataLinkManager::send(uint8_t dest_board, uint8_t* data, uint16_t data
                 ESP_LOGE(DEBUG_LINK_TAG, "Failed to find entry for %d", new_frame.receiver_id);
                 return ESP_FAIL;
             }
+            phys_comms->send(send_data, offset, &config, channel_to_route);
         }
-        phys_comms->send(send_data, offset, &config, channel_to_route);
 
         //can wait for the rmt to finish
         // esp_err_t res = phys_comms->wait_until_send_complete(curr_channel); //this cannot be here in deployment but until the RMT manager can hold this copy of data this will have to be here
@@ -280,35 +280,34 @@ esp_err_t DataLinkManager::receive(uint8_t* data, size_t data_len, size_t* recv_
     frame_header header;
     res = get_data_from_frame(data, *recv_len, message, &message_size, &header);
     if (res != ESP_OK){
+        vPortFree((void*)message);
         return ESP_FAIL;
     }
-    ESP_LOGI(DEBUG_LINK_TAG, "Received frame destined for board %d", header.receiver_id);
+    // ESP_LOGI(DEBUG_LINK_TAG, "Received frame of type 0x%X destined for board %d", GET_TYPE(header.type_flag), header.receiver_id);
     
     //check for a rip frame
-    if (static_cast<FrameType>(header.type_flag) == FrameType::RIP_TABLE_CONTROL){
+    if (static_cast<FrameType>(GET_TYPE(header.type_flag)) == FrameType::RIP_TABLE_CONTROL){
         printf("Got a RIP frame\n");
-
-        if (res != ESP_OK){
-            return ESP_FAIL; //crc or data len failed
-        }
 
         for (size_t i = 0; i < message_size-1; i+=2){
             uint8_t board_id = message[i];
             uint8_t hops = message[i+1];
             ESP_LOGI(DEBUG_LINK_TAG, "Received: board_id %d and number of hops %d on channel %d", board_id, hops, curr_channel);
-
+            
             RIPRow* entry = nullptr;
-
+            
             res = rip_find_entry(board_id, &entry, true);
             if (res != ESP_OK){
+                vPortFree((void*)message);
                 return ESP_FAIL;
             }
-
+            
             if (entry == nullptr){
                 printf("rip pointer\n");
+                vPortFree((void*)message);
                 return ESP_FAIL; //no room for more entries in the table
             }
-
+            
             if (entry->valid == RIP_NEW_ROW){
                 //adding a new entry
                 rip_add_entry(board_id, hops + 1, curr_channel, &entry);
@@ -316,18 +315,39 @@ esp_err_t DataLinkManager::receive(uint8_t* data, size_t data_len, size_t* recv_
                 //updating an entry
                 rip_update_entry(hops + 1, curr_channel, &entry);
             }
+            
+            if (GET_FLAG(header.type_flag) == FLAG_DISCOVERY){
+                //discovery -> send routing table
+                ESP_LOGI(DEBUG_LINK_TAG, "got discovery reply");
+                RIPRow_public row_queue = {
+                    .info = entry->info,
+                    .channel = entry->channel
+                };
+                
+                xQueueSendToBack(discovery_tables, &row_queue, (TickType_t)10);
+            }
+            
         }
         *recv_len = 0;
+        if (message_size == RIP_DISCOVERY_MESSAGE_SIZE){
+            res = send_rip_frame(false, header.sender_id);
+            if (res != ESP_OK){
+                ESP_LOGE(DEBUG_LINK_TAG, "Failed to send back rip table to board %d", header.sender_id);
+                return res;
+            }
+        }
     }
 
     //got frame but not destined for this board
-    if (header.receiver_id != this_board_id && header.receiver_id != BROADCAST_ADDR && header.seq_num != sequence_num_map[header.receiver_id]){
+    if (header.receiver_id != this_board_id && header.receiver_id != BROADCAST_ADDR && header.seq_num > sequence_num_map[header.receiver_id]){
         ESP_LOGI(DEBUG_LINK_TAG, "Sending message to board %d with message %s", header.receiver_id, message);
-        res = send(header.receiver_id, message, message_size, FrameType::DEBUG_CONTROL_TYPE, curr_channel);
+        res = send(header.receiver_id, message, message_size, FrameType::DEBUG_CONTROL_TYPE, 0);
         *recv_len = 0;
+        vPortFree((void*)message);
         return res;
     }
 
+    vPortFree((void*)message);
     return ESP_OK;
 }
 
@@ -359,6 +379,11 @@ esp_err_t DataLinkManager::get_data_from_frame(uint8_t* data, size_t data_len, u
     
         if (header->data_len > data_len){
             ESP_LOGE(DEBUG_LINK_TAG, "Mismatch data length in control frame");
+            return ESP_FAIL;
+        }
+
+        if (header->data_len == 0){
+            ESP_LOGE(DEBUG_LINK_TAG, "Data len 0");
             return ESP_FAIL;
         }
 
@@ -473,6 +498,8 @@ void DataLinkManager::init_rip(){
     // rip_table[2].ttl = RIP_TTL_START,
     // rip_table[2].valid = 1;
 
+    discovery_tables = xQueueCreate(RIP_MAX_ROUTES, sizeof(RIPRow_public));
+
     start_rip_tasks();
 }
 
@@ -493,9 +520,15 @@ esp_err_t DataLinkManager::rip_add_entry(uint8_t board_id, uint8_t hops, uint8_t
     (*entry)->ttl = RIP_TTL_START;
     (*entry)->valid = 1;
 
+    
     ESP_LOGI(DEBUG_LINK_TAG, "board_id %d now has hops %d from channel %d", (*entry)->info.board_id, (*entry)->info.hops, channel);
-
+    
     xSemaphoreGive((*entry)->row_sem);
+    
+    if (uxQueueMessagesWaiting(manual_broadcasts) == 0){
+        bool dummy = true;
+        xQueueSend(manual_broadcasts, &dummy, 0); //new row - send broadcast
+    }
 
     return ESP_OK;
 }
@@ -534,6 +567,8 @@ esp_err_t DataLinkManager::rip_update_entry(uint8_t new_hop, uint8_t channel, RI
         return ESP_FAIL;
     }
 
+    uint8_t old_hops = (*entry)->info.hops;
+
     if ((*entry)->info.hops > new_hop && (*entry)->info.hops != RIP_MAX_HOPS + 1){ //no count to infinity if path is invalid
         (*entry)->info.hops = new_hop;
         (*entry)->channel = channel;
@@ -545,6 +580,12 @@ esp_err_t DataLinkManager::rip_update_entry(uint8_t new_hop, uint8_t channel, RI
     ESP_LOGI(DEBUG_LINK_TAG, "refreshed board_id %d ttl", (*entry)->info.board_id);
 
     xSemaphoreGive((*entry)->row_sem);
+
+    if (uxQueueMessagesWaiting(manual_broadcasts) == 0 && old_hops > new_hop && old_hops != RIP_MAX_HOPS + 1){
+        //if hops were changed, send broadcast (if there isn't already one manual broadcast request pending)
+        bool dummy = true;
+        xQueueSend(manual_broadcasts, &dummy, 0);
+    }
 
     return ESP_OK;
 }
@@ -598,7 +639,14 @@ esp_err_t DataLinkManager::rip_find_entry(uint8_t board_id, RIPRow** entry, bool
     return ESP_OK;
 }
 
-esp_err_t DataLinkManager::broadcast_rip_frame(bool manual_broadcast = false){
+/**
+ * @brief Sends RIP frame
+ * 
+ * @param broadcast True - broadcasts (sends rip table to all available channels); False - sends rip table via routing based on `dest_id`
+ * @param dest_id Destination board (requesting board) to send the rip table to (ignored if `broadcast is true`)
+ * @return esp_err_t 
+ */
+esp_err_t DataLinkManager::send_rip_frame(bool broadcast, uint8_t dest_id){
     //use the control frame for the demo (as the number of rows increase, we will need to use the generic frame)
     //data will be [board_id (1), hops (1), board_id (2), hops (2), ...]
 
@@ -615,7 +663,7 @@ esp_err_t DataLinkManager::broadcast_rip_frame(bool manual_broadcast = false){
         if (rip_table[i].info.hops == RIP_MAX_HOPS + 1){
             //invalid hop, decrement counter
             rip_table[i].ttl_flush--;
-            if (rip_table[i].ttl_flush == 0 && !manual_broadcast){
+            if (rip_table[i].ttl_flush == 0){
                 rip_table[i].valid = RIP_INVALID_ROW;
                 xSemaphoreGive(rip_table[i].row_sem);
                 continue;
@@ -635,12 +683,14 @@ esp_err_t DataLinkManager::broadcast_rip_frame(bool manual_broadcast = false){
     }
 
     esp_err_t res;
-
-    for (uint8_t channel = 0; channel < num_channels; channel++){
-        res = send(BROADCAST_ADDR, rip_message, message_idx, FrameType::RIP_TABLE_CONTROL, channel);
-        if (res != ESP_OK){
-            ESP_LOGE(DEBUG_LINK_TAG, "Failed to send rip frame on channel %d", channel);
-        }
+    if (broadcast){
+        res = send(BROADCAST_ADDR, rip_message, message_idx, FrameType::RIP_TABLE_CONTROL, 0);
+    } else {
+        ESP_LOGI(DEBUG_LINK_TAG, "replying to discovery request to board %d", dest_id);
+        res = send(dest_id, rip_message, message_idx, FrameType::RIP_TABLE_CONTROL, FLAG_DISCOVERY);
+    }
+    if (res != ESP_OK){
+        ESP_LOGE(DEBUG_LINK_TAG, "Failed to send rip frame on channel %d", 0);
     }
 
     return ESP_OK;
@@ -672,6 +722,106 @@ esp_err_t DataLinkManager::route_frame(uint8_t dest_id, uint8_t* channel_to_send
     return ESP_OK;
 }
 
+esp_err_t DataLinkManager::get_routing_table(RIPRow_public* table, size_t* table_size){
+    if (table == nullptr){
+        ESP_LOGE(DEBUG_LINK_TAG, "Invalid table pointer");
+        return ESP_FAIL;
+    }
+
+    if (table_size == nullptr){
+        ESP_LOGE(DEBUG_LINK_TAG, "Invalid table size pointer");
+        return ESP_FAIL;
+    }
+
+    if (*table_size < RIP_MAX_ROUTES){
+        ESP_LOGE(DEBUG_LINK_TAG, "Invalid table size (must be greater than %d)", RIP_MAX_ROUTES);
+        return ESP_FAIL;
+    }
+
+    size_t curr_size = 0;
+
+    for (size_t i = 0; i < RIP_MAX_ROUTES; i++){
+        if (xSemaphoreTake(rip_table[i].row_sem, (TickType_t)RIP_MAX_SEM_WAIT) != pdTRUE){
+            return ESP_FAIL;
+        }
+        if (rip_table[i].valid == RIP_VALID_ROW){
+            table[i].info = rip_table[i].info;
+            table[i].channel = rip_table[i].channel;
+            curr_size++;
+        } 
+        xSemaphoreGive(rip_table[i].row_sem);
+    }
+
+    *table_size = curr_size;
+
+    return ESP_OK;
+}
+
+/**
+ * @brief Gets all of the routing tables of each board in the network and returns a routing matrix (entire topology of the network).
+ * 
+ * RIP table will have an entry that refers to its own board id (and will always have hop value of 0 and a channel value of `MAX_CHANNELS + 1`)
+ * 
+ * @warning not completely working (unable to get other board's table properly)
+ * 
+ * @param matrix 
+ * @param matrix_size size in multiples of `sizeof(RIPRow_public)`
+ * @return esp_err_t 
+ */
+esp_err_t DataLinkManager::get_network_toplogy(RIPRow_public_matrix* matrix, size_t* matrix_size){
+    if (matrix == nullptr){
+        ESP_LOGE(DEBUG_LINK_TAG, "Invalid matrix pointer");
+        return ESP_FAIL;
+    }
+
+    if (matrix_size == nullptr){
+        ESP_LOGE(DEBUG_LINK_TAG, "Invalid matrix size pointer");
+        return ESP_FAIL;
+    }
+
+    if (*matrix_size < RIP_MAX_ROUTES){
+        ESP_LOGE(DEBUG_LINK_TAG, "Invalid matrix size (must be greater than %d)", RIP_MAX_ROUTES);
+        return ESP_FAIL;
+    }
+
+    size_t curr_size = 0;
+    matrix[0].board_id = this_board_id;
+    if (matrix[0].table == nullptr || matrix[0].size < RIP_MAX_ROUTES){
+        ESP_LOGE(DEBUG_LINK_TAG, "Invalid table size for index 0");
+        return ESP_FAIL;
+    }
+
+    esp_err_t res;
+    
+    res = get_routing_table(matrix[0].table, &matrix[0].size);
+    if (res != ESP_OK){
+        return ESP_FAIL;
+    }
+    curr_size++;
+
+    uint8_t message[RIP_DISCOVERY_MESSAGE_SIZE] = {0};
+    for (size_t i = 1; i < matrix[0].size; i++){
+        ESP_LOGI(DEBUG_LINK_TAG, "Sending discovery request for board %d", matrix[0].table[i].info.board_id);
+        send(matrix[0].table[i].info.board_id, message, 1, FrameType::RIP_TABLE_CONTROL, FLAG_DISCOVERY); //send a discovery request to a board in this board's table index i
+        uint8_t table_idx = 0;
+        RIPRow_public temp;
+        while (xQueueReceive(discovery_tables, &temp, (TickType_t)1000) == pdTRUE){ //the board should have responded with rows from its routing table to insert into the matrix
+            ESP_LOGI(DEBUG_LINK_TAG, "putting discovery reply into matrix");
+            matrix[i].table[table_idx].info.board_id = temp.info.board_id;
+            matrix[i].table[table_idx].info.hops = temp.info.hops;
+            matrix[i].table[table_idx++].channel = temp.channel;
+        }
+        matrix[i].size = table_idx;
+        curr_size++;
+
+        xQueueReset(discovery_tables); //reset the queue
+    }
+
+    *matrix_size = curr_size;
+
+    return ESP_OK;
+}
+
 [[noreturn]] void DataLinkManager::rip_broadcast_timer_function(void* args){
     DataLinkManager* link_layer_obj = static_cast<DataLinkManager*>(args);
     if (link_layer_obj == nullptr || link_layer_obj->manual_broadcasts == nullptr){
@@ -686,7 +836,7 @@ esp_err_t DataLinkManager::route_frame(uint8_t dest_id, uint8_t* channel_to_send
         bool dummy;
         xQueueReceive(link_layer_obj->manual_broadcasts, &dummy, pdMS_TO_TICKS(RIP_BROADCAST_INTERVAL)); //wait up to RIP_BROADCAST_INTERVAL ms
         ESP_LOGI(DEBUG_LINK_TAG, "Broadcasting table..."); //debug
-        res = link_layer_obj->broadcast_rip_frame(true);
+        res = link_layer_obj->send_rip_frame(true, 0);
         if (res != ESP_OK){
             ESP_LOGE(DEBUG_LINK_TAG, "Failed to broadcast rip frame");
         }
@@ -701,6 +851,8 @@ esp_err_t DataLinkManager::route_frame(uint8_t dest_id, uint8_t* channel_to_send
     }
     ESP_LOGI(DEBUG_LINK_TAG, "Starting RIP ttl decrement task");
     bool broadcast = false;
+    bool dummy = true;
+    xQueueSend(link_layer_obj->manual_broadcasts, &dummy, 0);
     while(true){
         vTaskDelay(pdMS_TO_TICKS(RIP_MS_TO_SEC)); //run every second
         for (size_t i = 0; i < RIP_MAX_ROUTES; i++){
@@ -730,7 +882,6 @@ esp_err_t DataLinkManager::route_frame(uint8_t dest_id, uint8_t* channel_to_send
 
         if (broadcast && uxQueueMessagesWaiting(link_layer_obj->manual_broadcasts) == 0){
             broadcast = false;
-            bool dummy = true;
             xQueueSend(link_layer_obj->manual_broadcasts, &dummy, 0);
         }
     }
@@ -743,10 +894,10 @@ esp_err_t DataLinkManager::route_frame(uint8_t dest_id, uint8_t* channel_to_send
  * - start a task to periodically decrement the ttl values of each row in the RIP table (WIP) - this will require some sort of mutex on the table itself
  */
 void DataLinkManager::start_rip_tasks(){
-    manual_broadcasts = xQueueCreate(1, sizeof(bool));
+    manual_broadcasts = xQueueCreate(2, sizeof(bool));
 
     ESP_LOGI(DEBUG_LINK_TAG, "Starting RIP Broadcast task");
-    xTaskCreate(DataLinkManager::rip_broadcast_timer_function, "RIPBroadcast", 2048, static_cast<void*>(this), 5, NULL);
+    xTaskCreate(DataLinkManager::rip_broadcast_timer_function, "RIPBroadcast", 4096, static_cast<void*>(this), 5, NULL);
     ESP_LOGI(DEBUG_LINK_TAG, "Starting RIP TTL task");
     xTaskCreate(DataLinkManager::rip_ttl_decrement_task, "RIPTTL", 2048, static_cast<void*>(this), 5, NULL);
-}
+} 
