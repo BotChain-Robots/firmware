@@ -9,6 +9,7 @@
 #include "lwip/sockets.h"
 #include "lwip/sys.h"
 #include <lwip/netdb.h>
+#include <iostream>
 
 #include "TCPServer.h"
 
@@ -20,13 +21,12 @@
 //       - authenticate (don't just return true from the auth function)
 //       - tx from board
 
-TCPServer::TCPServer(const int port, QueueHandle_t rx_queue) {
+TCPServer::TCPServer(const int port, const QueueHandle_t rx_queue) {
     this->m_port = port;
     this->m_mutex = xSemaphoreCreateMutex();
     this->m_clients = std::unordered_set<int>();
     this->m_task = nullptr;
     this->m_rx_task = nullptr;
-    this->m_tx_task = nullptr;
     this->m_rx_queue = rx_queue;
     this->m_server_sock = 0;
 
@@ -37,7 +37,6 @@ TCPServer::TCPServer(const int port, QueueHandle_t rx_queue) {
 TCPServer::~TCPServer() {
     vTaskDelete(this->m_task);
     vTaskDelete(this->m_rx_task);
-    vTaskDelete(this->m_tx_task);
     vSemaphoreDelete(this->m_mutex);
 }
 
@@ -149,6 +148,7 @@ TCPServer::~TCPServer() {
 
                     if (len < 0) {
                         printf("Error occurred during receiving: errno %d\n", errno);
+                        to_remove.emplace_back(sock);
                     } else if (0 == len) {
                         printf("Connection closed\n");
                         close(sock);
@@ -198,3 +198,19 @@ bool TCPServer::authenticate_client(int sock) {
     // todo: authentication (wait for a passphrase from the client)
     return 0;
 }
+
+int TCPServer::send_msg(char *buffer, size_t length) const {
+    // todo: should we assign a unique rank to each pc?
+
+    if (!is_network_connected()) {
+        return -1;
+    }
+
+    for (const auto client_sock : m_clients) {
+        std::cout << "sending tcp" << std::endl;
+        send(client_sock, buffer, length, 0);
+    }
+
+    return 0;
+}
+

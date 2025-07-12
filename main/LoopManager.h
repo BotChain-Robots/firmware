@@ -7,7 +7,7 @@
 
 class LoopManager {
 public:
-    static void control_loop();
+    [[noreturn]] static void control_loop();
 
 private:
 
