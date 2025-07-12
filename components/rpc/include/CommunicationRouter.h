@@ -28,6 +28,8 @@ public:
 
     [[noreturn]] static void router_thread(void *args);
 
+    int send_msg(char* buffer, size_t length) const;
+
     // todo: does this really need to be here (so i can access from thread)?
     QueueHandle_t m_tcp_rx_queue;
     std::function<void(char*, int)> m_rx_callback;

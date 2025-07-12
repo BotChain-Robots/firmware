@@ -16,6 +16,7 @@ class TCPServer : IRPCServer {
 public:
     TCPServer(int port, QueueHandle_t rx_queue);
     ~TCPServer();
+    int send_msg(char* buffer, size_t length) const;
 
 private:
     bool authenticate_client(int client_sock);
@@ -29,7 +30,6 @@ private:
 
     TaskHandle_t m_task;
     TaskHandle_t m_rx_task;
-    TaskHandle_t m_tx_task;
 
     QueueHandle_t m_rx_queue;
 
