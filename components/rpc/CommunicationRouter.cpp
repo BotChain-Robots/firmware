@@ -95,7 +95,9 @@ void CommunicationRouter::update_leader() {
 
     this->m_leader = max;
 
-    mDNSDiscoveryService::set_connected_boards(connected_module_ids);
+    if (this->m_leader == m_module_id) {
+        mDNSDiscoveryService::set_connected_boards(connected_module_ids);
+    }
 
     this->m_last_leader_updated = std::chrono::system_clock::now();
 }

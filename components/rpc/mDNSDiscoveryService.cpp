@@ -32,7 +32,7 @@ void mDNSDiscoveryService::setup() {
     mdns_service_txt_set("_robotcontrol", "_tcp", service_txt_data, 3);
 }
 
-void mDNSDiscoveryService::set_connected_boards(std::vector<int>& boards) {
+void mDNSDiscoveryService::set_connected_boards(const std::vector<int>& boards) {
     std::stringstream ss;
 
     for (int i = 0; i < boards.size(); i++) {

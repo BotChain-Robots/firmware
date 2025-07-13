@@ -4,6 +4,7 @@
 #include <esp_event.h>
 #include <freertos/semphr.h>
 #include <cstring>
+#include <mDNSDiscoveryService.h>
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
@@ -188,6 +189,7 @@ void WifiManager::wifi_event_handler(void *event_handler_arg, esp_event_base_t e
     } else if (WIFI_EVENT_STA_CONNECTED == event_id) {
         printf("Connected to wifi in station mode\n");
         that->update_state(wifi_state::connected);
+        mDNSDiscoveryService::setup();
     } else if (WIFI_EVENT_STA_DISCONNECTED == event_id) {
         printf("Station mode shutdown\n");
         xSemaphoreTake(that->m_mutex, portMAX_DELAY);
@@ -204,5 +206,8 @@ void WifiManager::wifi_event_handler(void *event_handler_arg, esp_event_base_t e
         printf("User connected to AP\n");
     } else if (WIFI_EVENT_AP_STADISCONNECTED == event_id) {
         printf("User disconnected from AP\n");
+    } else if (WIFI_EVENT_AP_START == event_id) {
+        mDNSDiscoveryService::setup();
+        printf("AP started\n");
     }
 }
