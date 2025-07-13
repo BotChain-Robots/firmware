@@ -1,9 +1,9 @@
 #include "CommunicationRouter.h"
 
-#include <ConfigManager.h>
 #include <iostream>
-#include <mDNSDiscoveryService.h>
-#include <MPIMessageBuilder.h>
+#include "mDNSDiscoveryService.h"
+#include "MPIMessageBuilder.h"
+#include "WifiManager.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
@@ -49,8 +49,12 @@ CommunicationRouter::~CommunicationRouter() {
     that->m_data_link_manager->start_receive_frames(channel);
     while (true) {
         // todo: very c style function calls
-        that->m_data_link_manager->receive(reinterpret_cast<uint8_t *>(buffer), 512, &bytes_received, channel);
+        const auto err = that->m_data_link_manager->receive(reinterpret_cast<uint8_t *>(buffer), 512, &bytes_received, channel);
         that->m_data_link_manager->start_receive_frames(channel);
+
+        if (ESP_OK != err) {
+            continue;
+        }
 
         that->route(reinterpret_cast<uint8_t *>(buffer), bytes_received);
 
@@ -63,14 +67,15 @@ int CommunicationRouter::send_msg(char* buffer, const size_t length) const {
     return 0;
 }
 
+// todo: the number of things this is doing in so many different places is crazy...
 void CommunicationRouter::update_leader() {
     RIPRow_public table[RIP_MAX_ROUTES];
-    size_t table_size = 0;
+    size_t table_size = RIP_MAX_ROUTES;
     this->m_data_link_manager->get_routing_table(table, &table_size);
 
     // Leader election (just get the highest id in rip)
     std::vector<int> connected_module_ids;
-    uint8_t max = ConfigManager::get_module_id();
+    uint8_t max = m_module_id;
     for (int i = 0; i < table_size; i++) {
         const auto id = table[i].info.board_id;
         connected_module_ids.emplace_back(id);
@@ -79,17 +84,28 @@ void CommunicationRouter::update_leader() {
         }
     }
 
+    // Leader has changed, we may need to change PC connection state
+    if (this->m_leader != max) {
+        if (max == m_module_id) {
+            m_pc_connection->connect();
+        } else if (this->m_leader == m_module_id) {
+            m_pc_connection->disconnect();
+        }
+    }
+
     this->m_leader = max;
 
     mDNSDiscoveryService::set_connected_boards(connected_module_ids);
+
+    this->m_last_leader_updated = std::chrono::system_clock::now();
 }
 
 void CommunicationRouter::route(uint8_t* buffer, const size_t length) const {
     const auto& mpi_message = Flatbuffers::MPIMessageBuilder::parse_mpi_message(buffer);
 
-    if (mpi_message->destination() == ConfigManager::get_module_id()) {
+    if (mpi_message->destination() == m_module_id) {
         this->m_rx_callback(reinterpret_cast<char *>(buffer), 512);
-    } else if (mpi_message->destination() == PC_ADDR && this->m_leader == ConfigManager::get_module_id()) {
+    } else if (mpi_message->destination() == PC_ADDR && this->m_leader == m_module_id) {
         this->m_tcp_server->send_msg(reinterpret_cast<char *>(buffer), 512);
     } else {
         this->m_data_link_manager->send(mpi_message->destination(), buffer, length, FrameType::MOTOR_TYPE, 0);
