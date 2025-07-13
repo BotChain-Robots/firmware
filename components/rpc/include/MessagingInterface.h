@@ -7,14 +7,15 @@
 
 #include <memory>
 #include <unordered_map>
+#include <constants/app_comms.h>
 
 #include "CommunicationRouter.h"
 
 class MessagingInterface {
 public:
-    MessagingInterface()
+    explicit MessagingInterface(std::unique_ptr<WifiManager>&& pc_connection)
         : m_mpi_rx_queue(xQueueCreate(MAX_RX_BUFFER_SIZE, RX_QUEUE_SIZE)),
-            m_router(std::make_unique<CommunicationRouter>([this](char* buffer, const int size) { handleRecv(buffer, size); })),
+            m_router(std::make_unique<CommunicationRouter>([this](char* buffer, const int size) { handleRecv(buffer, size); }, std::move(pc_connection))),
             m_map_semaphore(xSemaphoreCreateMutex()) {};
 
     ~MessagingInterface();

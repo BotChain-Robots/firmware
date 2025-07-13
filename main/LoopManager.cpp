@@ -11,7 +11,7 @@
 #include "esp_log.h"
 
 [[noreturn]] void LoopManager::control_loop() {
-    const auto messaging_interface = std::make_unique<MessagingInterface>();
+    const auto messaging_interface = std::make_unique<MessagingInterface>(std::make_unique<WifiManager>());
 
     char buffer[512];
     while (true) {
@@ -20,7 +20,7 @@
 
 
         char s[21] = {'H', 'e', 'l', 'l', 'o', ' ', 'f', 'r', 'o', 'm', ' ', 't', 'h', 'e', ' ', 'B', 'O', 'A', 'R', 'D', '!' };
-        messaging_interface->send(s, 21, 1, 2, true);
+        messaging_interface->send(s, 21, 5, 2, true);
 
         ESP_LOGI("MEM", "Free internal RAM: %d", heap_caps_get_free_size(MALLOC_CAP_8BIT));
         ESP_LOGI("MEM", "Free PSRAM: %d", heap_caps_get_free_size(MALLOC_CAP_SPIRAM));

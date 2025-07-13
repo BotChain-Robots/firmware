@@ -16,11 +16,11 @@ DataLinkManager::DataLinkManager(uint8_t board_id, uint8_t num_channels = MAX_CH
         return;
     }
 
-    if (get_board_id(this_board_id) != ESP_OK){
+    // if (get_board_id(this_board_id) != ESP_OK){
         //failed to read from NVM for board id under key "board". Will write a new entry
         this_board_id = board_id;
         set_board_id(this_board_id);
-    }
+    // }
 
     // if (this_board_id != board_id){
     //     //NVM board id is different from `board_id` -> update entry to the new board id

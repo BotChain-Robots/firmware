@@ -26,6 +26,7 @@ void ConfigManager::init_config() {
     nvs_close(config_handle);
 }
 
+// todo: we should probably cache some of these things
 uint16_t ConfigManager::get_module_id() {
     nvs_handle config_handle;
     nvs_open(NVS_FLASH_NAMESPACE, NVS_READONLY, &config_handle);

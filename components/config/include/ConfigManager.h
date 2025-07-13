@@ -6,6 +6,7 @@
 #define CONFIGMANAGER_H
 
 #include "constants/config.h"
+#include "flatbuffers_generated/RobotModule_generated.h"
 
 class ConfigManager {
 public:

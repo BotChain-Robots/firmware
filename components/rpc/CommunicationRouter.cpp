@@ -1,26 +1,113 @@
 #include "CommunicationRouter.h"
 
 #include <iostream>
+#include "mDNSDiscoveryService.h"
+#include "MPIMessageBuilder.h"
+#include "WifiManager.h"
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 
+#include "Tables.h"
+
+#include "PtrQueue.h"
+
 CommunicationRouter::~CommunicationRouter() {
     vTaskDelete(m_router_thread);
-    vQueueDelete(m_tcp_rx_queue);
 }
 
+// todo: we really need to change all char to uint8_t everywhere
+// todo: get rid of copying going on, need to pass around sharedptrs/uniqueptrs
+
+// todo: this needs to be combined with the 4 rmt threads
 [[noreturn]] void CommunicationRouter::router_thread(void *args) {
     const auto that = static_cast<CommunicationRouter *>(args);
 
-    // todo: change to queue set
-    char buffer[512];
     while (true) {
-        xQueueReceive(that->m_tcp_rx_queue, buffer, portMAX_DELAY);
-        that->m_rx_callback(buffer, 512);
-        std::cout << "callback" << std::endl;
+        // todo: strange to have this here, but i dont want 4 threads calling it or a thread just for it.
+        if (std::chrono::system_clock::now() - that->m_last_leader_updated > std::chrono::seconds(15)) {
+            that->update_leader();
+        }
+
+        const auto buffer = that->m_tcp_rx_queue->dequeue();
+
+        std::cout << "dequeued buffer" << std::endl;
+
+        that->m_rx_callback(reinterpret_cast<char *>(buffer->data()), buffer->size());
+        std::cout << "WiFi callback" << std::endl;
+    }
+}
+
+[[noreturn]] void CommunicationRouter::link_layer_thread(void *args) {
+    const auto* params = static_cast<link_layer_thread_params *>(args);
+    const auto that = params->router;
+    const auto channel = params->channel;
+    delete params;
+
+    char buffer[512];
+    size_t bytes_received = 0;
+    that->m_data_link_manager->start_receive_frames(channel);
+    while (true) {
+        // todo: very c style function calls
+        const auto err = that->m_data_link_manager->receive(reinterpret_cast<uint8_t *>(buffer), 512, &bytes_received, channel);
+        that->m_data_link_manager->start_receive_frames(channel);
+
+        if (ESP_OK != err) {
+            continue;
+        }
+
+        that->route(reinterpret_cast<uint8_t *>(buffer), bytes_received);
+
+        std::cout << "RMT callback" << std::endl;
     }
 }
 
 int CommunicationRouter::send_msg(char* buffer, const size_t length) const {
-    return this->m_tcp_server->send_msg(buffer, length);
+    route(reinterpret_cast<uint8_t *>(buffer), length);
+    return 0;
+}
+
+// todo: the number of things this is doing in so many different places is crazy...
+void CommunicationRouter::update_leader() {
+    RIPRow_public table[RIP_MAX_ROUTES];
+    size_t table_size = RIP_MAX_ROUTES;
+    this->m_data_link_manager->get_routing_table(table, &table_size);
+
+    // Leader election (just get the highest id in rip)
+    std::vector<int> connected_module_ids;
+    uint8_t max = m_module_id;
+    for (int i = 0; i < table_size; i++) {
+        const auto id = table[i].info.board_id;
+        connected_module_ids.emplace_back(id);
+        if (max > id) {
+            max = id;
+        }
+    }
+
+    // Leader has changed, we may need to change PC connection state
+    if (this->m_leader != max) {
+        if (max == m_module_id) {
+            m_pc_connection->connect();
+        } else if (this->m_leader == m_module_id) {
+            m_pc_connection->disconnect();
+        }
+    }
+
+    this->m_leader = max;
+
+    mDNSDiscoveryService::set_connected_boards(connected_module_ids);
+
+    this->m_last_leader_updated = std::chrono::system_clock::now();
+}
+
+void CommunicationRouter::route(uint8_t* buffer, const size_t length) const {
+    const auto& mpi_message = Flatbuffers::MPIMessageBuilder::parse_mpi_message(buffer);
+
+    if (mpi_message->destination() == m_module_id) {
+        this->m_rx_callback(reinterpret_cast<char *>(buffer), 512);
+    } else if (mpi_message->destination() == PC_ADDR && this->m_leader == m_module_id) {
+        this->m_tcp_server->send_msg(reinterpret_cast<char *>(buffer), 512);
+    } else {
+        this->m_data_link_manager->send(mpi_message->destination(), buffer, length, FrameType::MOTOR_TYPE, 0);
+    }
 }
