@@ -32,7 +32,7 @@ TCPServer::TCPServer(const int port, const std::shared_ptr<PtrQueue<std::vector<
     this->m_rx_queue = rx_queue;
     this->m_server_sock = 0;
 
-    xTaskCreate(tcp_server_task, "tcp_accept_server", 2048, this, 5, &this->m_task);
+    xTaskCreate(tcp_server_task, "tcp_accept_server", 3072, this, 5, &this->m_task);
     xTaskCreate(socket_monitor_thread, "tcp_rx", 4096, this, 5, &this->m_rx_task);
 }
 
@@ -148,7 +148,15 @@ TCPServer::~TCPServer() {
                     auto buffer = std::make_unique<std::vector<uint8_t>>();
                     buffer->resize(MAX_RX_BUFFER_SIZE);
 
-                    int len = recv(sock, buffer->data(), MAX_RX_BUFFER_SIZE, 0); // temp: for the null terminator
+                    uint32_t msg_size = 0;
+                    recv(sock, &msg_size, 4, MSG_WAITALL);
+                    if (msg_size < 1 || msg_size > 512) {
+                        continue;
+                    }
+
+                    printf("Message size: %ld\n", msg_size);
+
+                    int len = recv(sock, buffer->data(), msg_size, MSG_WAITALL);
                     if (len < 0) {
                         printf("Error occurred during receiving: errno %d\n", errno);
                         to_remove.emplace_back(sock);
@@ -203,7 +211,7 @@ bool TCPServer::authenticate_client(int sock) {
     return 0;
 }
 
-int TCPServer::send_msg(char *buffer, size_t length) const {
+int TCPServer::send_msg(char *buffer, uint32_t length) const {
     // todo: should we assign a unique rank to each pc?
 
     if (!is_network_connected()) {
@@ -212,6 +220,7 @@ int TCPServer::send_msg(char *buffer, size_t length) const {
 
     for (const auto client_sock : m_clients) {
         std::cout << "sending tcp" << std::endl;
+        send(client_sock, &length, 4, 0);
         send(client_sock, buffer, length, 0);
     }
 

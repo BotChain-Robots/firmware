@@ -13,7 +13,7 @@ public:
     ~mDNSDiscoveryService() = delete;
 
     static void setup();
-    static void set_connected_boards(std::vector<int>& boards);
+    static void set_connected_boards(const std::vector<int>& boards);
 };
 
 #endif //DISCOVERYSERVICE_H

@@ -19,7 +19,7 @@ class TCPServer : IRPCServer {
 public:
     TCPServer(int port, const std::shared_ptr<PtrQueue<std::vector<uint8_t>>>& rx_queue);
     ~TCPServer();
-    int send_msg(char* buffer, size_t length) const;
+    int send_msg(char* buffer, uint32_t length) const;
 
 private:
     bool authenticate_client(int client_sock);
