@@ -12,9 +12,4 @@
 #define MODULE_ID_KEY           "module_id"
 #define MODULE_TYPE_KEY         "module_type"
 
-
-enum ModuleType { splitter }; // todo: maybe this should be flatbuffer
-
-
-
 #endif //CONFIG_H

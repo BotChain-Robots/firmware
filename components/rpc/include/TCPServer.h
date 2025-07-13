@@ -5,6 +5,7 @@
 #ifndef TCPSERVER_H
 #define TCPSERVER_H
 
+#include <memory>
 #include <vector>
 #include <unordered_set>
 
@@ -12,9 +13,11 @@
 
 #include "IRPCServer.h"
 
+#include "PtrQueue.h"
+
 class TCPServer : IRPCServer {
 public:
-    TCPServer(int port, QueueHandle_t rx_queue);
+    TCPServer(int port, const std::shared_ptr<PtrQueue<std::vector<uint8_t>>>& rx_queue);
     ~TCPServer();
     int send_msg(char* buffer, size_t length) const;
 
@@ -31,7 +34,7 @@ private:
     TaskHandle_t m_task;
     TaskHandle_t m_rx_task;
 
-    QueueHandle_t m_rx_queue;
+    std::shared_ptr<PtrQueue<std::vector<uint8_t>>> m_rx_queue;
 
     SemaphoreHandle_t m_mutex;
     std::unordered_set<int> m_clients;

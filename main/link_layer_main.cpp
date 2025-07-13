@@ -185,29 +185,7 @@ void multi_transceiver(void* arg) {
         iteration++;
         if (iteration == 10){
             iteration = 0;
-            // if (!receive_only){
-            //     matrix_size = RIP_MAX_ROUTES;
-            //     res = obj->get_network_toplogy(matrix, &matrix_size);
-            //     if (res != ESP_OK){
-            //         ESP_LOGE("multi", "Failed to get topology");
-            //     } else {
-            //         for (int i = 0; i < matrix_size; i++){
-            //             printf("Table for board %d:\n", matrix[i].board_id);
-            //             printf("board_id\t\tHops\t\tChannel\n");
-            //             for (int j = 0; j < matrix[i].size; j++){
-            //                 printf("%d\t\t%d\t\t%d\n", matrix[i].table[j].info.board_id, matrix[i].table[j].info.hops, matrix[i].table[j].channel);
-            //             }
-            //             printf("=====\n");
 
-            //             //reset matrix
-            //             matrix[i].size = RIP_MAX_ROUTES;
-            //         }
-            //     }
-            // }
-        }
-        
-        // vTaskDelay(1000 /    portTICK_PERIOD_MS); // wait 1 second before trying to send again
-        //reset temp buffers
         memset(recv_buf, 0, DATA_SIZE_TEST);
         memset(send_buf, 0, DATA_SIZE_TEST);
         

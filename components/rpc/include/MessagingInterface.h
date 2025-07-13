@@ -7,6 +7,7 @@
 
 #include <memory>
 #include <unordered_map>
+#include <constants/app_comms.h>
 
 #include "CommunicationRouter.h"
 

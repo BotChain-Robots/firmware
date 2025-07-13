@@ -13,7 +13,9 @@
 
 #include "TCPServer.h"
 
+#include <memory>
 #include <bits/shared_ptr_base.h>
+#include <constants/app_comms.h>
 
 #include "constants/tcp.h"
 
@@ -21,7 +23,7 @@
 //       - authenticate (don't just return true from the auth function)
 //       - tx from board
 
-TCPServer::TCPServer(const int port, const QueueHandle_t rx_queue) {
+TCPServer::TCPServer(const int port, const std::shared_ptr<PtrQueue<std::vector<uint8_t>>>& rx_queue) {
     this->m_port = port;
     this->m_mutex = xSemaphoreCreateMutex();
     this->m_clients = std::unordered_set<int>();
@@ -143,9 +145,10 @@ TCPServer::~TCPServer() {
             for (int sock : that->m_clients) {
                 if (FD_ISSET(sock, &readfds)) {
                     // Handle socket
-                    char buffer[512];
-                    int len = recv(sock, buffer, sizeof(buffer) - 1, 0); // temp: for the null terminator
+                    auto buffer = std::make_unique<std::vector<uint8_t>>();
+                    buffer->resize(MAX_RX_BUFFER_SIZE);
 
+                    int len = recv(sock, buffer->data(), MAX_RX_BUFFER_SIZE, 0); // temp: for the null terminator
                     if (len < 0) {
                         printf("Error occurred during receiving: errno %d\n", errno);
                         to_remove.emplace_back(sock);
@@ -155,7 +158,8 @@ TCPServer::~TCPServer() {
                         to_remove.emplace_back(sock);
                     } else {
                         printf("TCP Server Received %d bytes\n", len);
-                        xQueueSendToBack(that->m_rx_queue, buffer, 0);
+                        buffer->resize(len);
+                        that->m_rx_queue->enqueue(std::move(buffer));
                     }
                 }
             }

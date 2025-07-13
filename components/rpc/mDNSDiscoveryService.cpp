@@ -12,6 +12,7 @@
 
 #include <string>
 #include <format>
+#include <sstream>
 
 // todo: clean this up (strange to be a constructor) also need to add more details, need to add to routing table
 void mDNSDiscoveryService::setup() {
@@ -25,8 +26,26 @@ void mDNSDiscoveryService::setup() {
     mdns_txt_item_t service_txt_data[3] = {
         {"module_id",std::to_string(ConfigManager::get_module_id()).c_str()},
         {"module_type",std::to_string(ConfigManager::get_module_type()).c_str()},
-           {"connected_modules","2,3,4,5,6,7,8,9"},
+           {"connected_modules",""},
     };
 
+    mdns_service_txt_set("_robotcontrol", "_tcp", service_txt_data, 3);
+}
+
+void mDNSDiscoveryService::set_connected_boards(std::vector<int>& boards) {
+    std::stringstream ss;
+
+    for (int i = 0; i < boards.size(); i++) {
+        ss << boards[i];
+        if (i < boards.size() - 1) {
+            ss << ',';
+        }
+    }
+
+    mdns_txt_item_t service_txt_data[3] = {
+        {"module_id",std::to_string(ConfigManager::get_module_id()).c_str()},
+        {"module_type",std::to_string(ConfigManager::get_module_type()).c_str()},
+           {"connected_modules",ss.str().c_str()},
+    };
     mdns_service_txt_set("_robotcontrol", "_tcp", service_txt_data, 3);
 }
