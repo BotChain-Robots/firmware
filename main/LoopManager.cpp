@@ -16,9 +16,9 @@
     char buffer[512];
     while (true) {
         messaging_interface->recv(buffer, 512, 0, 1);
-        std::cout << buffer << std::endl;
+        //std::cout << buffer << std::endl;
 
-        std::string s = std::format("Hello from number {} board!", ConfigManager::get_module_id());
+        std::string s = std::format("num {} bo", ConfigManager::get_module_id());
         messaging_interface->send(s.data(), s.size(), 0, 2, true);
 
         ESP_LOGI("MEM", "Free internal RAM: %d", heap_caps_get_free_size(MALLOC_CAP_8BIT));

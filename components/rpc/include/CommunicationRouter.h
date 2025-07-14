@@ -40,13 +40,13 @@ public:
             m_last_leader_updated(std::chrono::system_clock::now()){
         update_leader();
 
-        xTaskCreate(router_thread, "communication_router", 3072, this, 3, &this->m_router_thread);
+        xTaskCreate(router_thread, "communication_router", 4096, this, 3, &this->m_router_thread);
 
         const auto num_channels = MODULE_TO_NUM_CHANNELS_MAP[ConfigManager::get_module_type()];
         this->m_link_layer_threads.resize(num_channels);
         for (uint8_t i = 0; i < num_channels; i++) {
             auto *params = new link_layer_thread_params(this, i);
-            xTaskCreate(link_layer_thread, "communication_router_rmt", 3072, params, 3, &this->m_link_layer_threads[i]);
+            xTaskCreate(link_layer_thread, "communication_router_rmt", 4096, params, 3, &this->m_link_layer_threads[i]);
         }
     }
 

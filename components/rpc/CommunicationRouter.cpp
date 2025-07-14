@@ -105,7 +105,10 @@ void CommunicationRouter::route(uint8_t* buffer, const size_t length) const {
     } else if (mpi_message->destination() == PC_ADDR && this->m_leader == m_module_id) {
         std::cout << "Routing to wifi [dest:" << static_cast<int>(mpi_message->destination()) << ", length: " << length << "]" << std::endl;
         this->m_tcp_server->send_msg(reinterpret_cast<char *>(buffer), 512);
-    } else {
+    } else if (mpi_message->destination() == PC_ADDR) {
+        std::cout << "Routing to wireline for wifi [dest:" << static_cast<int>(mpi_message->destination()) << ", length: " << length << "]" << std::endl;
+        this->m_data_link_manager->send(this->m_leader, buffer, length, FrameType::MOTOR_TYPE, 0);
+    }else {
         std::cout << "Routing to wireline [dest:" << static_cast<int>(mpi_message->destination()) << ", length: " << length << "]" << std::endl;
         this->m_data_link_manager->send(mpi_message->destination(), buffer, length, FrameType::MOTOR_TYPE, 0);
     }
