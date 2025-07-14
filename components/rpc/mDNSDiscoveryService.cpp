@@ -12,6 +12,7 @@
 
 #include <string>
 #include <format>
+#include <iostream>
 #include <sstream>
 
 // todo: clean this up (strange to be a constructor) also need to add more details, need to add to routing table
@@ -36,7 +37,7 @@ void mDNSDiscoveryService::set_connected_boards(const std::vector<int>& boards) 
     std::stringstream ss;
 
     for (int i = 0; i < boards.size(); i++) {
-        ss << boards[i];
+        ss << std::to_string(boards[i]);
         if (i < boards.size() - 1) {
             ss << ',';
         }

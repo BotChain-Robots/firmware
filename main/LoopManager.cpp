@@ -18,9 +18,8 @@
         messaging_interface->recv(buffer, 512, 0, 1);
         std::cout << buffer << std::endl;
 
-
-        char s[21] = {'H', 'e', 'l', 'l', 'o', ' ', 'f', 'r', 'o', 'm', ' ', 't', 'h', 'e', ' ', 'B', 'O', 'A', 'R', 'D', '!' };
-        messaging_interface->send(s, 21, 5, 2, true);
+        std::string s = std::format("Hello from number {} board!", ConfigManager::get_module_id());
+        messaging_interface->send(s.data(), s.size(), 0, 2, true);
 
         ESP_LOGI("MEM", "Free internal RAM: %d", heap_caps_get_free_size(MALLOC_CAP_8BIT));
         ESP_LOGI("MEM", "Free PSRAM: %d", heap_caps_get_free_size(MALLOC_CAP_SPIRAM));

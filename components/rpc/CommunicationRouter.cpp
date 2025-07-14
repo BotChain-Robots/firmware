@@ -24,17 +24,8 @@ CommunicationRouter::~CommunicationRouter() {
     const auto that = static_cast<CommunicationRouter *>(args);
 
     while (true) {
-        // todo: strange to have this here, but i dont want 4 threads calling it or a thread just for it.
-        if (std::chrono::system_clock::now() - that->m_last_leader_updated > std::chrono::seconds(15)) {
-            that->update_leader();
-        }
-
         const auto buffer = that->m_tcp_rx_queue->dequeue();
-
-        std::cout << "dequeued buffer" << std::endl;
-
-        that->m_rx_callback(reinterpret_cast<char *>(buffer->data()), buffer->size());
-        std::cout << "WiFi callback" << std::endl;
+        that->route(buffer->data(), buffer->size());
     }
 }
 
@@ -52,13 +43,18 @@ CommunicationRouter::~CommunicationRouter() {
         const auto err = that->m_data_link_manager->receive(reinterpret_cast<uint8_t *>(buffer), 512, &bytes_received, channel);
         that->m_data_link_manager->start_receive_frames(channel);
 
-        if (ESP_OK != err) {
+        // todo: do we only want one thread ever doing this?
+        if (std::chrono::system_clock::now() - that->m_last_leader_updated > std::chrono::seconds(15)) {
+            that->m_last_leader_updated = std::chrono::system_clock::now();
+            std::cout << "Updating leader" << std::endl;
+            that->update_leader();
+        }
+
+        if (ESP_OK != err || bytes_received < 1) {
             continue;
         }
 
         that->route(reinterpret_cast<uint8_t *>(buffer), bytes_received);
-
-        std::cout << "RMT callback" << std::endl;
     }
 }
 
@@ -79,7 +75,7 @@ void CommunicationRouter::update_leader() {
     for (int i = 0; i < table_size; i++) {
         const auto id = table[i].info.board_id;
         connected_module_ids.emplace_back(id);
-        if (max > id) {
+        if (id > max) { // todo: change this to be correct
             max = id;
         }
     }
@@ -98,18 +94,19 @@ void CommunicationRouter::update_leader() {
     if (this->m_leader == m_module_id) {
         mDNSDiscoveryService::set_connected_boards(connected_module_ids);
     }
-
-    this->m_last_leader_updated = std::chrono::system_clock::now();
 }
 
 void CommunicationRouter::route(uint8_t* buffer, const size_t length) const {
     const auto& mpi_message = Flatbuffers::MPIMessageBuilder::parse_mpi_message(buffer);
 
     if (mpi_message->destination() == m_module_id) {
+        std::cout << "Routing to this module [dest:" << static_cast<int>(mpi_message->destination()) << ", length: " << length << "]" << std::endl;
         this->m_rx_callback(reinterpret_cast<char *>(buffer), 512);
     } else if (mpi_message->destination() == PC_ADDR && this->m_leader == m_module_id) {
+        std::cout << "Routing to wifi [dest:" << static_cast<int>(mpi_message->destination()) << ", length: " << length << "]" << std::endl;
         this->m_tcp_server->send_msg(reinterpret_cast<char *>(buffer), 512);
     } else {
+        std::cout << "Routing to wireline [dest:" << static_cast<int>(mpi_message->destination()) << ", length: " << length << "]" << std::endl;
         this->m_data_link_manager->send(mpi_message->destination(), buffer, length, FrameType::MOTOR_TYPE, 0);
     }
 }
