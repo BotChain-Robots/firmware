@@ -1,6 +1,12 @@
-idf_component_register(SRCS "main.cpp"  "LoopManager.cpp"
-                       PRIV_REQUIRES esp_psram spi_flash nvs_flash esp_event rpc constants config rmt esp_driver_gptimer dataLink
-                       INCLUDE_DIRS "")
+file(GLOB_RECURSE ALL_SRCS
+        "${CMAKE_CURRENT_SOURCE_DIR}/*.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/*.S"
+)
+
+idf_component_register(SRCS ${ALL_SRCS}
+                       PRIV_REQUIRES esp_psram spi_flash nvs_flash esp_event rpc constants config rmt esp_driver_gptimer dataLink flatbuffers esp_driver_ledc
+                       INCLUDE_DIRS "include")
 
 if(DEFINED BOARD_NAME AND BOARD_NAME)
     message(STATUS "Building for board name: " ${BOARD_NAME})

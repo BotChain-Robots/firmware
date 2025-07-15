@@ -5,6 +5,9 @@
 #ifndef LOOPMANAGER_H
 #define LOOPMANAGER_H
 
+#include "control/IActuator.h"
+#include "control/ActuatorFactory.h"
+
 class LoopManager {
 public:
     [[noreturn]] static void control_loop();
