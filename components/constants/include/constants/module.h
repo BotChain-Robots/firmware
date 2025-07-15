@@ -9,8 +9,10 @@
 
 #include "flatbuffers_generated/RobotModule_generated.h"
 
-inline std::unordered_map<int, int> MODULE_TO_NUM_CHANNELS_MAP {{ModuleType_SPLITTER, 4}, {ModuleType_SERVO_1, 2}, {ModuleType_DC_MOTOR, 1}};
+inline std::unordered_map<int, int> MODULE_TO_NUM_CHANNELS_MAP {{ModuleType_SPLITTER, 2}, {ModuleType_SERVO_1, 2}, {ModuleType_DC_MOTOR, 1}};
 
 #define PC_ADDR 0
+
+#define SERVO_GPIO 18
 
 #endif //MODULE_H

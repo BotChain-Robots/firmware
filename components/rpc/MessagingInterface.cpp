@@ -4,6 +4,7 @@
 
 #include "MessagingInterface.h"
 
+#include <AngleControlMessageBuilder.h>
 #include <ConfigManager.h>
 #include <freertos/queue.h>
 #include <freertos/semphr.h>
@@ -53,7 +54,11 @@ void MessagingInterface::handleRecv(const char* recv_buffer, int recv_size) {
 
     checkOrInsertTag(mpi_message->tag());
 
-    xQueueSendToBack(m_tag_to_queue.at(mpi_message->tag()), mpi_message->payload(), 0);
+    const auto temp = Flatbuffers::AngleControlMessageBuilder::parse_angle_control_message(reinterpret_cast<const uint8_t *>(mpi_message->payload()))->angle();
+
+    std::cout << "angle from before queue " << temp << std::endl;
+
+    xQueueSendToBack(m_tag_to_queue.at(mpi_message->tag()), mpi_message->payload()->data(), 0);
 }
 
 void MessagingInterface::checkOrInsertTag(const uint8_t tag) {

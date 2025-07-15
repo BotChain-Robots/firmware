@@ -1,5 +1,6 @@
 #include "CommunicationRouter.h"
 
+#include <AngleControlMessageBuilder.h>
 #include <iostream>
 #include "mDNSDiscoveryService.h"
 #include "MPIMessageBuilder.h"
@@ -101,6 +102,11 @@ void CommunicationRouter::route(uint8_t* buffer, const size_t length) const {
 
     if (mpi_message->destination() == m_module_id) {
         std::cout << "Routing to this module [dest:" << static_cast<int>(mpi_message->destination()) << ", length: " << length << "]" << std::endl;
+
+        const auto temp = Flatbuffers::AngleControlMessageBuilder::parse_angle_control_message(reinterpret_cast<const uint8_t *>(mpi_message->payload()))->angle();
+
+        std::cout << "angle from before router" << temp << std::endl;
+
         this->m_rx_callback(reinterpret_cast<char *>(buffer), 512);
     } else if (mpi_message->destination() == PC_ADDR && this->m_leader == m_module_id) {
         std::cout << "Routing to wifi [dest:" << static_cast<int>(mpi_message->destination()) << ", length: " << length << "]" << std::endl;
