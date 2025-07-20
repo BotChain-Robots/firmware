@@ -16,10 +16,12 @@
 #define REV_CHANNEL LEDC_CHANNEL_1
 #define DEADZONE 0.1
 #define KP 0.07
-#define KI 0.0075
+#define KI 0
 #define KD 0.065
 #define MIN_PWM_DUTY 675
 #define MAX_PWM_DUTY 1024
+#define TICKS_PER_ROTATION 14.0
+#define GEAR_RATIO 298.0
 
 DCMotorActuator::DCMotorActuator() {
     ledc_timer_config_t ledc_timer = {
@@ -107,7 +109,7 @@ void DCMotorActuator::pid_task(char* args) {
     const auto that = reinterpret_cast<DCMotorActuator*>(args);
 
     while (true) {
-        const double degrees = (encoder_ticks * 360.0) / (298.0 * 16);
+        const double degrees = (encoder_ticks * 360.0) / (GEAR_RATIO * TICKS_PER_ROTATION);
 
         const double error = degrees - that->m_target_angle;
         that->m_integral += error * KI;
