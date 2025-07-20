@@ -17,7 +17,8 @@ extern "C" [[noreturn]] void app_main(void) {
 
     ConfigManager::init_config();
 
-    ConfigManager::set_module_type(ModuleType_SERVO_1);
+    ConfigManager::set_module_type(ModuleType_DC_MOTOR);
+    ConfigManager::set_module_id(9);
 
     LoopManager::control_loop();
 }

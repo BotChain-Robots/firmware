@@ -15,4 +15,9 @@ inline std::unordered_map<int, int> MODULE_TO_NUM_CHANNELS_MAP {{ModuleType_SPLI
 
 #define SERVO_GPIO 1
 
+#define DC_MOTOR_PWM_FWD 1
+#define DC_MOTOR_PWM_REV 2
+#define DC_ENCODER_A 15
+#define DC_ENCODER_B 16
+
 #endif //MODULE_H
