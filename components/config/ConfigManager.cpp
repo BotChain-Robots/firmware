@@ -45,6 +45,29 @@ ModuleType ConfigManager::get_module_type() {
     return static_cast<ModuleType>(type);
 }
 
+std::string ConfigManager::get_wifi_ssid() {
+    return get_string(WIFI_SSID_KEY);
+}
+
+std::string ConfigManager::get_wifi_password() {
+    return get_string(WIFI_PASSWORD_KEY);
+}
+
+std::string ConfigManager::get_string(const char *key) {
+    nvs_handle config_handle;
+    nvs_open(NVS_FLASH_NAMESPACE, NVS_READONLY, &config_handle);
+
+    size_t required_size; // get size of the string
+    nvs_get_str(config_handle, key, nullptr, &required_size);
+
+    std::string str;
+    str.resize(required_size);
+    nvs_get_str(config_handle, key, str.data(), &required_size);
+
+    nvs_close(config_handle);
+    return str;
+}
+
 void ConfigManager::set_module_id(const uint16_t id) {
     nvs_handle config_handle;
     nvs_open(NVS_FLASH_NAMESPACE, NVS_READWRITE, &config_handle);
@@ -58,3 +81,18 @@ void ConfigManager::set_module_type(const ModuleType type) {
     nvs_set_u16(config_handle, MODULE_TYPE_KEY, type);
     nvs_close(config_handle);
 }
+
+void ConfigManager::set_wifi_ssid(const char* ssid) {
+    nvs_handle config_handle;
+    nvs_open(NVS_FLASH_NAMESPACE, NVS_READWRITE, &config_handle);
+    nvs_set_str(config_handle, WIFI_SSID_KEY, ssid);
+    nvs_close(config_handle);
+}
+
+void ConfigManager::set_wifi_password(const char* password) {
+    nvs_handle config_handle;
+    nvs_open(NVS_FLASH_NAMESPACE, NVS_READWRITE, &config_handle);
+    nvs_set_str(config_handle, WIFI_PASSWORD_KEY, password);
+    nvs_close(config_handle);
+}
+
