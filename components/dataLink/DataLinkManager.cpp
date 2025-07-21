@@ -138,7 +138,7 @@ esp_err_t DataLinkManager::send(uint8_t dest_board, uint8_t* data, uint16_t data
             .crc_16 = 0, //not made yet
         };
 
-        ESP_LOGI(DEBUG_LINK_TAG, "type flag %X\n", new_frame.type_flag);
+        // ESP_LOGI(DEBUG_LINK_TAG, "type flag %X\n", new_frame.type_flag);
         // printf("size of control frame %d\n", sizeof(control_frame));
         // printf("size of message %d\n", new_frame.data_len);
         // printf("message %s\n", data);
@@ -176,7 +176,7 @@ esp_err_t DataLinkManager::send(uint8_t dest_board, uint8_t* data, uint16_t data
             }
         };
 
-        // printf("sending message:\n");
+        // ESP_LOGI(DEBUG_LINK_TAG, "Sending %d bytes", offset);
         // print_buffer_binary(send_data, frame_size);
 
         uint8_t channel_to_route = MAX_CHANNELS;
@@ -192,6 +192,7 @@ esp_err_t DataLinkManager::send(uint8_t dest_board, uint8_t* data, uint16_t data
                 ESP_LOGE(DEBUG_LINK_TAG, "Failed to find entry for %d", new_frame.receiver_id);
                 return ESP_FAIL;
             }
+            // ESP_LOGI(DEBUG_LINK_TAG, "Sending message to %d", new_frame.receiver_id);
             phys_comms->send(send_data, offset, &config, channel_to_route);
         }
 
@@ -283,6 +284,8 @@ esp_err_t DataLinkManager::receive(uint8_t* data, size_t data_len, size_t* recv_
         vPortFree((void*)message);
         return ESP_FAIL;
     }
+    *recv_len = message_size;
+    memcpy(data, message, message_size);
     // ESP_LOGI(DEBUG_LINK_TAG, "Received frame of type 0x%X destined for board %d", GET_TYPE(header.type_flag), header.receiver_id);
     
     //check for a rip frame
@@ -292,7 +295,7 @@ esp_err_t DataLinkManager::receive(uint8_t* data, size_t data_len, size_t* recv_
         for (size_t i = 0; i < message_size-1; i+=2){
             uint8_t board_id = message[i];
             uint8_t hops = message[i+1];
-            ESP_LOGI(DEBUG_LINK_TAG, "Received: board_id %d and number of hops %d on channel %d", board_id, hops, curr_channel);
+            // ESP_LOGI(DEBUG_LINK_TAG, "Received: board_id %d and number of hops %d on channel %d", board_id, hops, curr_channel);
             
             RIPRow* entry = nullptr;
             
@@ -318,7 +321,7 @@ esp_err_t DataLinkManager::receive(uint8_t* data, size_t data_len, size_t* recv_
             
             if (GET_FLAG(header.type_flag) == FLAG_DISCOVERY){
                 //discovery -> send routing table
-                ESP_LOGI(DEBUG_LINK_TAG, "got discovery reply");
+                // ESP_LOGI(DEBUG_LINK_TAG, "got discovery reply");
                 RIPRow_public row_queue = {
                     .info = entry->info,
                     .channel = entry->channel
@@ -340,7 +343,7 @@ esp_err_t DataLinkManager::receive(uint8_t* data, size_t data_len, size_t* recv_
 
     //got frame but not destined for this board
     if (header.receiver_id != this_board_id && header.receiver_id != BROADCAST_ADDR && header.seq_num > sequence_num_map[header.receiver_id]){
-        ESP_LOGI(DEBUG_LINK_TAG, "Sending message to board %d with message %s", header.receiver_id, message);
+        // ESP_LOGI(DEBUG_LINK_TAG, "Sending message to board %d with message %s", header.receiver_id, message);
         res = send(header.receiver_id, message, message_size, FrameType::DEBUG_CONTROL_TYPE, 0);
         *recv_len = 0;
         vPortFree((void*)message);
@@ -399,12 +402,12 @@ esp_err_t DataLinkManager::get_data_from_frame(uint8_t* data, size_t data_len, u
             return ESP_FAIL;
         }
     
-        // printf("Frame Information:\n");
-        // printf("%-10s %-12s %-13s %-15s %-12s %-10s %-6s\n", 
-        //    "Preamble", "Sender ID", "Receiver ID", "Sequence Num", "Type+Flag", "Data Len", "CRC");
+        printf("Frame Information:\n");
+        printf("%-10s %-12s %-13s %-15s %-12s %-10s %-6s\n",
+        "Preamble", "Sender ID", "Receiver ID", "Sequence Num", "Type+Flag", "Data Len", "CRC");
     
-        // printf("0x%02X       %-12d %-13d %-15d  0x%02X       %-10d   0x%04X\n", 
-        //    temp.preamble, temp.sender_id, temp.receiver_id, temp.seq_num, temp.type_flag, temp.data_len, temp.crc_16);
+        printf("0x%02X       %-12d %-13d %-15d  0x%02X       %-10d   0x%04X\n",
+        header->preamble, header->sender_id, header->receiver_id, header->seq_num, header->type_flag, header->data_len, header->crc_16);
     } else {
         //not implemented yet
     }
@@ -521,7 +524,7 @@ esp_err_t DataLinkManager::rip_add_entry(uint8_t board_id, uint8_t hops, uint8_t
     (*entry)->valid = 1;
 
     
-    ESP_LOGI(DEBUG_LINK_TAG, "board_id %d now has hops %d from channel %d", (*entry)->info.board_id, (*entry)->info.hops, channel);
+    // ESP_LOGI(DEBUG_LINK_TAG, "board_id %d now has hops %d from channel %d", (*entry)->info.board_id, (*entry)->info.hops, channel);
     
     xSemaphoreGive((*entry)->row_sem);
     
@@ -572,12 +575,12 @@ esp_err_t DataLinkManager::rip_update_entry(uint8_t new_hop, uint8_t channel, RI
     if ((*entry)->info.hops > new_hop && (*entry)->info.hops != RIP_MAX_HOPS + 1){ //no count to infinity if path is invalid
         (*entry)->info.hops = new_hop;
         (*entry)->channel = channel;
-        ESP_LOGI(DEBUG_LINK_TAG, "updated board_id %d now has hops %d from channel %d", (*entry)->info.board_id, (*entry)->info.hops, channel);
+        // ESP_LOGI(DEBUG_LINK_TAG, "updated board_id %d now has hops %d from channel %d", (*entry)->info.board_id, (*entry)->info.hops, channel);
     }
     (*entry)->ttl = RIP_TTL_START;
     (*entry)->valid = 1;
 
-    ESP_LOGI(DEBUG_LINK_TAG, "refreshed board_id %d ttl", (*entry)->info.board_id);
+    // ESP_LOGI(DEBUG_LINK_TAG, "refreshed board_id %d ttl", (*entry)->info.board_id);
 
     xSemaphoreGive((*entry)->row_sem);
 
@@ -607,7 +610,7 @@ esp_err_t DataLinkManager::rip_find_entry(uint8_t board_id, RIPRow** entry, bool
         if (rip_table[i].valid == RIP_VALID_ROW && rip_table[i].info.board_id == board_id){
             *entry = &rip_table[i];
             xSemaphoreGive(rip_table[i].row_sem);
-            ESP_LOGI(DEBUG_LINK_TAG, "Found %d in table at row %d", board_id, i);
+            // ESP_LOGI(DEBUG_LINK_TAG, "Found %d in table at row %d", board_id, i);
             return ESP_OK;
         } 
         if (rip_table[i].valid == RIP_INVALID_ROW && free_slot == nullptr){
@@ -616,7 +619,7 @@ esp_err_t DataLinkManager::rip_find_entry(uint8_t board_id, RIPRow** entry, bool
         xSemaphoreGive(rip_table[i].row_sem);
     }
 
-    ESP_LOGI(DEBUG_LINK_TAG, "Finished looking for %d in table", board_id);
+    // ESP_LOGI(DEBUG_LINK_TAG, "Finished looking for %d in table", board_id);
 
     if (!reserve_row){
         return ESP_OK;
@@ -633,7 +636,7 @@ esp_err_t DataLinkManager::rip_find_entry(uint8_t board_id, RIPRow** entry, bool
         *entry = free_slot;
 
         xSemaphoreGive(free_slot->row_sem);
-        ESP_LOGI(DEBUG_LINK_TAG, "Reserved new entry for board %d", board_id);
+        // ESP_LOGI(DEBUG_LINK_TAG, "Reserved new entry for board %d", board_id);
     }
 
     return ESP_OK;
@@ -686,7 +689,7 @@ esp_err_t DataLinkManager::send_rip_frame(bool broadcast, uint8_t dest_id){
     if (broadcast){
         res = send(BROADCAST_ADDR, rip_message, message_idx, FrameType::RIP_TABLE_CONTROL, 0);
     } else {
-        ESP_LOGI(DEBUG_LINK_TAG, "replying to discovery request to board %d", dest_id);
+        // ESP_LOGI(DEBUG_LINK_TAG, "replying to discovery request to board %d", dest_id);
         res = send(dest_id, rip_message, message_idx, FrameType::RIP_TABLE_CONTROL, FLAG_DISCOVERY);
     }
     if (res != ESP_OK){
@@ -801,12 +804,12 @@ esp_err_t DataLinkManager::get_network_toplogy(RIPRow_public_matrix* matrix, siz
 
     uint8_t message[RIP_DISCOVERY_MESSAGE_SIZE] = {0};
     for (size_t i = 1; i < matrix[0].size; i++){
-        ESP_LOGI(DEBUG_LINK_TAG, "Sending discovery request for board %d", matrix[0].table[i].info.board_id);
+        // ESP_LOGI(DEBUG_LINK_TAG, "Sending discovery request for board %d", matrix[0].table[i].info.board_id);
         send(matrix[0].table[i].info.board_id, message, 1, FrameType::RIP_TABLE_CONTROL, FLAG_DISCOVERY); //send a discovery request to a board in this board's table index i
         uint8_t table_idx = 0;
         RIPRow_public temp;
         while (xQueueReceive(discovery_tables, &temp, (TickType_t)1000) == pdTRUE){ //the board should have responded with rows from its routing table to insert into the matrix
-            ESP_LOGI(DEBUG_LINK_TAG, "putting discovery reply into matrix");
+            // ESP_LOGI(DEBUG_LINK_TAG, "putting discovery reply into matrix");
             matrix[i].table[table_idx].info.board_id = temp.info.board_id;
             matrix[i].table[table_idx].info.hops = temp.info.hops;
             matrix[i].table[table_idx++].channel = temp.channel;
@@ -835,7 +838,7 @@ esp_err_t DataLinkManager::get_network_toplogy(RIPRow_public_matrix* matrix, siz
     while(true){
         bool dummy;
         xQueueReceive(link_layer_obj->manual_broadcasts, &dummy, pdMS_TO_TICKS(RIP_BROADCAST_INTERVAL)); //wait up to RIP_BROADCAST_INTERVAL ms
-        ESP_LOGI(DEBUG_LINK_TAG, "Broadcasting table..."); //debug
+        // ESP_LOGI(DEBUG_LINK_TAG, "Broadcasting table..."); //debug
         res = link_layer_obj->send_rip_frame(true, 0);
         if (res != ESP_OK){
             ESP_LOGE(DEBUG_LINK_TAG, "Failed to broadcast rip frame");

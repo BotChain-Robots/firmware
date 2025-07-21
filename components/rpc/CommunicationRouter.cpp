@@ -26,6 +26,7 @@ CommunicationRouter::~CommunicationRouter() {
 
     while (true) {
         const auto buffer = that->m_tcp_rx_queue->dequeue();
+        std::cout << "routing from tcp" << std::endl;
         that->route(buffer->data(), buffer->size());
     }
 }
@@ -55,6 +56,7 @@ CommunicationRouter::~CommunicationRouter() {
             continue;
         }
 
+        std::cout << "routing message from rmt" << std::endl;
         that->route(reinterpret_cast<uint8_t *>(buffer), bytes_received);
     }
 }
@@ -102,10 +104,6 @@ void CommunicationRouter::route(uint8_t* buffer, const size_t length) const {
 
     if (mpi_message->destination() == m_module_id) {
         std::cout << "Routing to this module [dest:" << static_cast<int>(mpi_message->destination()) << ", length: " << length << "]" << std::endl;
-
-        const auto temp = Flatbuffers::AngleControlMessageBuilder::parse_angle_control_message(reinterpret_cast<const uint8_t *>(mpi_message->payload()))->angle();
-
-        std::cout << "angle from before router" << temp << std::endl;
 
         this->m_rx_callback(reinterpret_cast<char *>(buffer), 512);
     } else if (mpi_message->destination() == PC_ADDR && this->m_leader == m_module_id) {

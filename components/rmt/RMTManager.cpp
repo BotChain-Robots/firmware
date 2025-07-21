@@ -362,6 +362,7 @@ size_t RMTManager::encoder_callback(const void* data, size_t data_size, size_t s
     }
 
     *done = (ctx->byte_index >= data_size); //if the transmit is done, set the `done` flag to true (all bytes have been encoded)
+    ESP_LOGD(DEBUG_TAG, "RMTManager::encoder_callback returned %d", *done);
     return symbols_used;
 }
 
@@ -440,6 +441,7 @@ esp_err_t RMTManager::send(uint8_t* data, size_t size, rmt_transmit_config_t* co
         ESP_LOGE(DEBUG_TAG, "Failed to send %s", data);
         return ESP_FAIL;
     }
+    // ESP_LOGI(DEBUG_TAG, "RMTManager started transmit job to channel %d", channel_num);
     return ESP_OK;
 }
 

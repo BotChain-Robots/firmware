@@ -54,10 +54,6 @@ void MessagingInterface::handleRecv(const char* recv_buffer, int recv_size) {
 
     checkOrInsertTag(mpi_message->tag());
 
-    const auto temp = Flatbuffers::AngleControlMessageBuilder::parse_angle_control_message(reinterpret_cast<const uint8_t *>(mpi_message->payload()))->angle();
-
-    std::cout << "angle from before queue " << temp << std::endl;
-
     xQueueSendToBack(m_tag_to_queue.at(mpi_message->tag()), mpi_message->payload()->data(), 0);
 }
 
