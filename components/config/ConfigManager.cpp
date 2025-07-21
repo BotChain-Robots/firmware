@@ -58,11 +58,15 @@ std::string ConfigManager::get_string(const char *key) {
     nvs_open(NVS_FLASH_NAMESPACE, NVS_READONLY, &config_handle);
 
     size_t required_size; // get size of the string
-    nvs_get_str(config_handle, key, nullptr, &required_size);
+    if (ESP_ERR_NVS_NOT_FOUND == nvs_get_str(config_handle, key, nullptr, &required_size)) {
+        return "";
+    }
 
     std::string str;
     str.resize(required_size);
-    nvs_get_str(config_handle, key, str.data(), &required_size);
+    if (ESP_ERR_NVS_NOT_FOUND == nvs_get_str(config_handle, key, str.data(), &required_size)) {
+        return "";
+    }
 
     nvs_close(config_handle);
     return str;
