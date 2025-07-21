@@ -1,5 +1,6 @@
 #include "WifiManager.h"
 
+#include <ConfigManager.h>
 #include <esp_netif.h>
 #include <esp_event.h>
 #include <freertos/semphr.h>
@@ -96,14 +97,18 @@ int WifiManager::init_connection() {
     esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, wifi_event_handler, this);
     esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, wifi_event_handler, this);
 
-    // TEMP: get config from nvs key value store
     wifi_config_t wifi_configuration;
     wifi_configuration = {
         .sta = {
-            .ssid = "",
-            .password = "",
         }
     };
+
+    std::string ssid = ConfigManager::get_wifi_ssid();
+    std::string pass = ConfigManager::get_wifi_password();
+    std::strncpy(reinterpret_cast<char *>(wifi_configuration.sta.ssid), ssid.c_str(), 32);
+    std::strncpy(reinterpret_cast<char *>(wifi_configuration.sta.password), pass.c_str(), 64);
+    wifi_configuration.sta.ssid[31] = '\0';
+    wifi_configuration.sta.password[63] = '\0';
 
     esp_wifi_set_mode(WIFI_MODE_STA);
     esp_wifi_set_config(static_cast<wifi_interface_t>(ESP_IF_WIFI_STA), &wifi_configuration);
