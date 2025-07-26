@@ -24,6 +24,7 @@ public:
     int broadcast(char* buffer, int size, int root, bool durable);
     int recv(char* buffer, int size, int source, int tag);
     int sendrecv(char* send_buffer, int send_size, int dest, int send_tag, char* recv_buffer, int recv_size, int recv_tag);
+    std::pair<std::vector<uint8_t>, std::vector<Orientation>> get_physically_connected_modules() const;
 
 private:
     void handleRecv(const char* recv_buffer, int recv_size);

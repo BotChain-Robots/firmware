@@ -17,5 +17,8 @@ extern "C" [[noreturn]] void app_main(void) {
 
     ConfigManager::init_config();
 
-    LoopManager::control_loop();
+
+    const auto loop_manager = std::make_unique<LoopManager>();
+    xTaskCreate(reinterpret_cast<TaskFunction_t>(LoopManager::metadata_tx_loop), "metadata_tx", 3096, loop_manager.get(), 3, nullptr);
+    loop_manager->control_loop();
 }

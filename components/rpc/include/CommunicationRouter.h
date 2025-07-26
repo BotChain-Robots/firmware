@@ -18,7 +18,9 @@
 #include "constants/tcp.h"
 #include "constants/module.h"
 
-#include"PtrQueue.h"
+#include "flatbuffers_generated/TopologyMessage_generated.h"
+
+#include "PtrQueue.h"
 
 class CommunicationRouter {
 
@@ -44,7 +46,7 @@ public:
 
         const auto num_channels = MODULE_TO_NUM_CHANNELS_MAP[ConfigManager::get_module_type()];
         this->m_link_layer_threads.resize(num_channels);
-        for (uint8_t i = 0; i < num_channels; i++) {
+        for (int i = 0; i < num_channels; i++) {
             auto *params = new link_layer_thread_params(this, i);
             xTaskCreate(link_layer_thread, "communication_router_rmt", 4096, params, 3, &this->m_link_layer_threads[i]);
         }
@@ -61,13 +63,16 @@ public:
 
     void route(uint8_t *buffer, size_t length) const;
 
+    // pair of <module, mount orientation>
+    std::pair<std::vector<uint8_t>, std::vector<Orientation>> get_physically_connected_modules() const;
+
     // todo: does this really need to be here (so i can access from thread)?
     std::shared_ptr<PtrQueue<std::vector<uint8_t>>> m_tcp_rx_queue;
     std::function<void(char*, int)> m_rx_callback;
 private:
-    TaskHandle_t m_router_thread;
+    TaskHandle_t m_router_thread = nullptr;
     std::vector<TaskHandle_t> m_link_layer_threads;
-    std::unique_ptr<TCPServer> m_tcp_server;
+    std::unique_ptr<TCPServer> m_tcp_server; // todo: dependency injection
     std::unique_ptr<DataLinkManager> m_data_link_manager;
     std::unique_ptr<WifiManager> m_pc_connection; // todo: change to dependency inject
     uint8_t m_leader = 0;
