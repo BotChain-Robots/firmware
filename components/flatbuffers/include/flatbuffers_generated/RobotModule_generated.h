@@ -8,10 +8,13 @@
 
 // Ensure the included flatbuffers.h is the same version as when this file was
 // generated, otherwise it may not be compatible.
-// static_assert(FLATBUFFERS_VERSION_MAJOR == 25 &&
+//static_assert(FLATBUFFERS_VERSION_MAJOR == 25 &&
 //              FLATBUFFERS_VERSION_MINOR == 2 &&
 //              FLATBUFFERS_VERSION_REVISION == 10,
 //             "Non-compatible flatbuffers version included");
+
+struct MotorState;
+struct MotorStateBuilder;
 
 struct RobotModule;
 struct RobotModuleBuilder;
@@ -52,62 +55,178 @@ inline const char *EnumNameModuleType(ModuleType e) {
   return EnumNamesModuleType()[index];
 }
 
+enum Orientation : int8_t {
+  Orientation_Deg0 = 0,
+  Orientation_Deg90 = 1,
+  Orientation_Deg180 = 2,
+  Orientation_Deg270 = 3,
+  Orientation_MIN = Orientation_Deg0,
+  Orientation_MAX = Orientation_Deg270
+};
+
+inline const Orientation (&EnumValuesOrientation())[4] {
+  static const Orientation values[] = {
+    Orientation_Deg0,
+    Orientation_Deg90,
+    Orientation_Deg180,
+    Orientation_Deg270
+  };
+  return values;
+}
+
+inline const char * const *EnumNamesOrientation() {
+  static const char * const names[5] = {
+    "Deg0",
+    "Deg90",
+    "Deg180",
+    "Deg270",
+    nullptr
+  };
+  return names;
+}
+
+inline const char *EnumNameOrientation(Orientation e) {
+  if (::flatbuffers::IsOutRange(e, Orientation_Deg0, Orientation_Deg270)) return "";
+  const size_t index = static_cast<size_t>(e);
+  return EnumNamesOrientation()[index];
+}
+
+enum ModuleState : uint8_t {
+  ModuleState_NONE = 0,
+  ModuleState_MotorState = 1,
+  ModuleState_MIN = ModuleState_NONE,
+  ModuleState_MAX = ModuleState_MotorState
+};
+
+inline const ModuleState (&EnumValuesModuleState())[2] {
+  static const ModuleState values[] = {
+    ModuleState_NONE,
+    ModuleState_MotorState
+  };
+  return values;
+}
+
+inline const char * const *EnumNamesModuleState() {
+  static const char * const names[3] = {
+    "NONE",
+    "MotorState",
+    nullptr
+  };
+  return names;
+}
+
+inline const char *EnumNameModuleState(ModuleState e) {
+  if (::flatbuffers::IsOutRange(e, ModuleState_NONE, ModuleState_MotorState)) return "";
+  const size_t index = static_cast<size_t>(e);
+  return EnumNamesModuleState()[index];
+}
+
+template<typename T> struct ModuleStateTraits {
+  static const ModuleState enum_value = ModuleState_NONE;
+};
+
+template<> struct ModuleStateTraits<MotorState> {
+  static const ModuleState enum_value = ModuleState_MotorState;
+};
+
+bool VerifyModuleState(::flatbuffers::Verifier &verifier, const void *obj, ModuleState type);
+bool VerifyModuleStateVector(::flatbuffers::Verifier &verifier, const ::flatbuffers::Vector<::flatbuffers::Offset<void>> *values, const ::flatbuffers::Vector<uint8_t> *types);
+
+struct MotorState FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
+  typedef MotorStateBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_ANGLE = 4
+  };
+  int32_t angle() const {
+    return GetField<int32_t>(VT_ANGLE, 0);
+  }
+  bool Verify(::flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyField<int32_t>(verifier, VT_ANGLE, 4) &&
+           verifier.EndTable();
+  }
+};
+
+struct MotorStateBuilder {
+  typedef MotorState Table;
+  ::flatbuffers::FlatBufferBuilder &fbb_;
+  ::flatbuffers::uoffset_t start_;
+  void add_angle(int32_t angle) {
+    fbb_.AddElement<int32_t>(MotorState::VT_ANGLE, angle, 0);
+  }
+  explicit MotorStateBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  ::flatbuffers::Offset<MotorState> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = ::flatbuffers::Offset<MotorState>(end);
+    return o;
+  }
+};
+
+inline ::flatbuffers::Offset<MotorState> CreateMotorState(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    int32_t angle = 0) {
+  MotorStateBuilder builder_(_fbb);
+  builder_.add_angle(angle);
+  return builder_.Finish();
+}
+
 struct RobotModule FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   typedef RobotModuleBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_ID = 4,
-    VT_IP = 6,
-    VT_HOSTNAME = 8,
-    VT_MODULE_TYPE = 10,
-    VT_CONNECTED_MODULE_IDS = 12
+    VT_MODULE_TYPE = 6,
+    VT_CONFIGURATION_TYPE = 8,
+    VT_CONFIGURATION = 10
   };
-  int32_t id() const {
-    return GetField<int32_t>(VT_ID, 0);
-  }
-  const ::flatbuffers::String *ip() const {
-    return GetPointer<const ::flatbuffers::String *>(VT_IP);
-  }
-  const ::flatbuffers::String *hostname() const {
-    return GetPointer<const ::flatbuffers::String *>(VT_HOSTNAME);
+  uint8_t id() const {
+    return GetField<uint8_t>(VT_ID, 0);
   }
   ModuleType module_type() const {
     return static_cast<ModuleType>(GetField<int8_t>(VT_MODULE_TYPE, 0));
   }
-  const ::flatbuffers::Vector<int32_t> *connected_module_ids() const {
-    return GetPointer<const ::flatbuffers::Vector<int32_t> *>(VT_CONNECTED_MODULE_IDS);
+  ModuleState configuration_type() const {
+    return static_cast<ModuleState>(GetField<uint8_t>(VT_CONFIGURATION_TYPE, 0));
+  }
+  const void *configuration() const {
+    return GetPointer<const void *>(VT_CONFIGURATION);
+  }
+  template<typename T> const T *configuration_as() const;
+  const MotorState *configuration_as_MotorState() const {
+    return configuration_type() == ModuleState_MotorState ? static_cast<const MotorState *>(configuration()) : nullptr;
   }
   bool Verify(::flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
-           VerifyField<int32_t>(verifier, VT_ID, 4) &&
-           VerifyOffset(verifier, VT_IP) &&
-           verifier.VerifyString(ip()) &&
-           VerifyOffset(verifier, VT_HOSTNAME) &&
-           verifier.VerifyString(hostname()) &&
+           VerifyField<uint8_t>(verifier, VT_ID, 1) &&
            VerifyField<int8_t>(verifier, VT_MODULE_TYPE, 1) &&
-           VerifyOffset(verifier, VT_CONNECTED_MODULE_IDS) &&
-           verifier.VerifyVector(connected_module_ids()) &&
+           VerifyField<uint8_t>(verifier, VT_CONFIGURATION_TYPE, 1) &&
+           VerifyOffset(verifier, VT_CONFIGURATION) &&
+           VerifyModuleState(verifier, configuration(), configuration_type()) &&
            verifier.EndTable();
   }
 };
+
+template<> inline const MotorState *RobotModule::configuration_as<MotorState>() const {
+  return configuration_as_MotorState();
+}
 
 struct RobotModuleBuilder {
   typedef RobotModule Table;
   ::flatbuffers::FlatBufferBuilder &fbb_;
   ::flatbuffers::uoffset_t start_;
-  void add_id(int32_t id) {
-    fbb_.AddElement<int32_t>(RobotModule::VT_ID, id, 0);
-  }
-  void add_ip(::flatbuffers::Offset<::flatbuffers::String> ip) {
-    fbb_.AddOffset(RobotModule::VT_IP, ip);
-  }
-  void add_hostname(::flatbuffers::Offset<::flatbuffers::String> hostname) {
-    fbb_.AddOffset(RobotModule::VT_HOSTNAME, hostname);
+  void add_id(uint8_t id) {
+    fbb_.AddElement<uint8_t>(RobotModule::VT_ID, id, 0);
   }
   void add_module_type(ModuleType module_type) {
     fbb_.AddElement<int8_t>(RobotModule::VT_MODULE_TYPE, static_cast<int8_t>(module_type), 0);
   }
-  void add_connected_module_ids(::flatbuffers::Offset<::flatbuffers::Vector<int32_t>> connected_module_ids) {
-    fbb_.AddOffset(RobotModule::VT_CONNECTED_MODULE_IDS, connected_module_ids);
+  void add_configuration_type(ModuleState configuration_type) {
+    fbb_.AddElement<uint8_t>(RobotModule::VT_CONFIGURATION_TYPE, static_cast<uint8_t>(configuration_type), 0);
+  }
+  void add_configuration(::flatbuffers::Offset<void> configuration) {
+    fbb_.AddOffset(RobotModule::VT_CONFIGURATION, configuration);
   }
   explicit RobotModuleBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
@@ -122,37 +241,41 @@ struct RobotModuleBuilder {
 
 inline ::flatbuffers::Offset<RobotModule> CreateRobotModule(
     ::flatbuffers::FlatBufferBuilder &_fbb,
-    int32_t id = 0,
-    ::flatbuffers::Offset<::flatbuffers::String> ip = 0,
-    ::flatbuffers::Offset<::flatbuffers::String> hostname = 0,
+    uint8_t id = 0,
     ModuleType module_type = ModuleType_SPLITTER,
-    ::flatbuffers::Offset<::flatbuffers::Vector<int32_t>> connected_module_ids = 0) {
+    ModuleState configuration_type = ModuleState_NONE,
+    ::flatbuffers::Offset<void> configuration = 0) {
   RobotModuleBuilder builder_(_fbb);
-  builder_.add_connected_module_ids(connected_module_ids);
-  builder_.add_hostname(hostname);
-  builder_.add_ip(ip);
-  builder_.add_id(id);
+  builder_.add_configuration(configuration);
+  builder_.add_configuration_type(configuration_type);
   builder_.add_module_type(module_type);
+  builder_.add_id(id);
   return builder_.Finish();
 }
 
-inline ::flatbuffers::Offset<RobotModule> CreateRobotModuleDirect(
-    ::flatbuffers::FlatBufferBuilder &_fbb,
-    int32_t id = 0,
-    const char *ip = nullptr,
-    const char *hostname = nullptr,
-    ModuleType module_type = ModuleType_SPLITTER,
-    const std::vector<int32_t> *connected_module_ids = nullptr) {
-  auto ip__ = ip ? _fbb.CreateString(ip) : 0;
-  auto hostname__ = hostname ? _fbb.CreateString(hostname) : 0;
-  auto connected_module_ids__ = connected_module_ids ? _fbb.CreateVector<int32_t>(*connected_module_ids) : 0;
-  return CreateRobotModule(
-      _fbb,
-      id,
-      ip__,
-      hostname__,
-      module_type,
-      connected_module_ids__);
+inline bool VerifyModuleState(::flatbuffers::Verifier &verifier, const void *obj, ModuleState type) {
+  switch (type) {
+    case ModuleState_NONE: {
+      return true;
+    }
+    case ModuleState_MotorState: {
+      auto ptr = reinterpret_cast<const MotorState *>(obj);
+      return verifier.VerifyTable(ptr);
+    }
+    default: return true;
+  }
+}
+
+inline bool VerifyModuleStateVector(::flatbuffers::Verifier &verifier, const ::flatbuffers::Vector<::flatbuffers::Offset<void>> *values, const ::flatbuffers::Vector<uint8_t> *types) {
+  if (!values || !types) return !values && !types;
+  if (values->size() != types->size()) return false;
+  for (::flatbuffers::uoffset_t i = 0; i < values->size(); ++i) {
+    if (!VerifyModuleState(
+        verifier,  values->Get(i), types->GetEnum<ModuleState>(i))) {
+      return false;
+    }
+  }
+  return true;
 }
 
 inline const RobotModule *GetRobotModule(const void *buf) {

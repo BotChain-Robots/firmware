@@ -5,12 +5,21 @@
 #ifndef LOOPMANAGER_H
 #define LOOPMANAGER_H
 
+#include <memory>
+
+#include <MessagingInterface.h>
+
 #include "control/IActuator.h"
 #include "control/ActuatorFactory.h"
 
 class LoopManager {
 public:
-    [[noreturn]] static void control_loop();
+    LoopManager() : m_messaging_interface(std::make_unique<MessagingInterface>(std::make_unique<WifiManager>())) {}
+    [[noreturn]] void control_loop() const;
+    [[noreturn]] static void metadata_tx_loop(char * args);
+
+private:
+    std::unique_ptr<MessagingInterface> m_messaging_interface;
 
 private:
 

@@ -117,3 +117,32 @@ void CommunicationRouter::route(uint8_t* buffer, const size_t length) const {
         this->m_data_link_manager->send(mpi_message->destination(), buffer, length, FrameType::MOTOR_TYPE, 0);
     }
 }
+
+std::pair<std::vector<uint8_t>, std::vector<Orientation>> CommunicationRouter::get_physically_connected_modules() const {
+    std::vector<RIPRow_public> table;
+    table.resize(RIP_MAX_ROUTES);
+    size_t table_size = RIP_MAX_ROUTES * sizeof(RIPRow_public);
+    m_data_link_manager->get_routing_table(table.data(), &table_size);
+
+    std::vector<uint8_t> connected_module_ids;
+    std::vector<Orientation> connected_module_orientations;
+    connected_module_ids.resize(MAX_WIRED_CONNECTIONS);
+    connected_module_orientations.resize(MAX_WIRED_CONNECTIONS);
+
+    for (int i = 0; i < MAX_WIRED_CONNECTIONS; i++) {
+        connected_module_ids[i] = 0; // this is not the PC ID here, marking as nc.
+    }
+
+    for (int i = 0; i < table_size; i++) {
+        if (table[i].info.hops == 1 && table[i].channel < MAX_WIRED_CONNECTIONS) {
+            connected_module_ids[table[i].channel] = table[i].info.board_id;
+        }
+    }
+
+    // todo: get orientation (temporary)
+    for (int i = 0; i < MAX_WIRED_CONNECTIONS; i++) {
+        connected_module_orientations[i] = Orientation_Deg0;
+    }
+
+    return { connected_module_ids, connected_module_orientations };
+}

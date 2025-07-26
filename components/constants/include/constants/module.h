@@ -13,6 +13,8 @@ inline std::unordered_map<int, int> MODULE_TO_NUM_CHANNELS_MAP {{ModuleType_SPLI
 
 #define PC_ADDR 0
 
+#define MAX_WIRED_CONNECTIONS 4
+
 #define SERVO_GPIO 1
 
 #define DC_MOTOR_PWM_FWD 1

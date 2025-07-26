@@ -64,3 +64,7 @@ void MessagingInterface::checkOrInsertTag(const uint8_t tag) {
     }
     xSemaphoreGive(m_map_semaphore);
 }
+
+std::pair<std::vector<uint8_t>, std::vector<Orientation>> MessagingInterface::get_physically_connected_modules() const {
+    return m_router->get_physically_connected_modules();
+}
