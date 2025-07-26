@@ -91,7 +91,7 @@ class RMTManager{
 
         // rmt_channel_handle_t tx_chan;
 
-        const gpio_num_t tx_gpio[MAX_CHANNELS] = {GPIO_NUM_3, GPIO_NUM_5, GPIO_NUM_11, GPIO_NUM_13}; //using pins 1,2,3,4 for channels 0,1,2,3 respectively for tx
+        const gpio_num_t tx_gpio[MAX_CHANNELS] = {GPIO_NUM_4, GPIO_NUM_5, GPIO_NUM_11, GPIO_NUM_13}; //using pins 1,2,3,4 for channels 0,1,2,3 respectively for tx
         // gpio_num_t tx_gpio[MAX_CHANNELS] = {GPIO_NUM_1}; //using pins 1,2,3,4 for channels 0,1,2,3 respectively for tx
 
         // rmt_encoder_context_t encoder_context = {0};
@@ -107,7 +107,7 @@ class RMTManager{
         //=====================RX=====================
         rmt_channel_handle_t rx_chan;
 
-        const gpio_num_t rx_gpio[MAX_CHANNELS] = {GPIO_NUM_4, GPIO_NUM_6, GPIO_NUM_12, GPIO_NUM_14}; //using pins 12,13,14,15 for channels 0,1,2,3 respectively for rx
+        const gpio_num_t rx_gpio[MAX_CHANNELS] = {GPIO_NUM_3, GPIO_NUM_6, GPIO_NUM_12, GPIO_NUM_14}; //using pins 12,13,14,15 for channels 0,1,2,3 respectively for rx
         // gpio_num_t rx_gpio[MAX_CHANNELS] = {GPIO_NUM_12}; //using pins 12,13,14,15 for channels 0,1,2,3 respectively for rx
 
         // QueueHandle_t receive_queue = NULL;
