@@ -642,7 +642,7 @@ int RMTManager::convert_symbols_to_char(rmt_symbol_word_t* symbols, size_t num, 
         }
         i++;
     }
-    printf("output_index %d\n", output_index);
+    // printf("output_index %d\n", output_index);
     return (int)output_index;
 }
 

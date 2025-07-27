@@ -7,11 +7,11 @@
 #include "flatbuffers/flatbuffers.h"
 
 // Ensure the included flatbuffers.h is the same version as when this file was
-// generated, otherwise it may not be compatible.
-//static_assert(FLATBUFFERS_VERSION_MAJOR == 25 &&
-//              FLATBUFFERS_VERSION_MINOR == 2 &&
-//              FLATBUFFERS_VERSION_REVISION == 10,
-//             "Non-compatible flatbuffers version included");
+// // generated, otherwise it may not be compatible.
+// static_assert(FLATBUFFERS_VERSION_MAJOR == 25 &&
+//               FLATBUFFERS_VERSION_MINOR == 2 &&
+//               FLATBUFFERS_VERSION_REVISION == 10,
+//              "Non-compatible flatbuffers version included");
 
 struct MotorState;
 struct MotorStateBuilder;
@@ -24,33 +24,36 @@ enum ModuleType : int8_t {
   ModuleType_SERVO_1 = 1,
   ModuleType_DC_MOTOR = 2,
   ModuleType_BATTERY = 3,
+  ModuleType_SERVO_2 = 4,
   ModuleType_MIN = ModuleType_SPLITTER,
-  ModuleType_MAX = ModuleType_BATTERY
+  ModuleType_MAX = ModuleType_SERVO_2
 };
 
-inline const ModuleType (&EnumValuesModuleType())[4] {
+inline const ModuleType (&EnumValuesModuleType())[5] {
   static const ModuleType values[] = {
     ModuleType_SPLITTER,
     ModuleType_SERVO_1,
     ModuleType_DC_MOTOR,
-    ModuleType_BATTERY
+    ModuleType_BATTERY,
+    ModuleType_SERVO_2
   };
   return values;
 }
 
 inline const char * const *EnumNamesModuleType() {
-  static const char * const names[5] = {
+  static const char * const names[6] = {
     "SPLITTER",
     "SERVO_1",
     "DC_MOTOR",
     "BATTERY",
+    "SERVO_2",
     nullptr
   };
   return names;
 }
 
 inline const char *EnumNameModuleType(ModuleType e) {
-  if (::flatbuffers::IsOutRange(e, ModuleType_SPLITTER, ModuleType_BATTERY)) return "";
+  if (::flatbuffers::IsOutRange(e, ModuleType_SPLITTER, ModuleType_SERVO_2)) return "";
   const size_t index = static_cast<size_t>(e);
   return EnumNamesModuleType()[index];
 }

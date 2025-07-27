@@ -114,7 +114,7 @@ class RMTManager{
 
         //rx_receive_config
         rmt_receive_config_t receive_config = {
-            .signal_range_min_ns = 100,
+            .signal_range_min_ns = 200,
             .signal_range_max_ns = 200 * 1000, 
             .flags = {
                 .en_partial_rx = true
