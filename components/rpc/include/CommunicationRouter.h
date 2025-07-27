@@ -9,6 +9,7 @@
 #include <functional>
 #include <memory>
 #include <chrono>
+#include <OrientationDetection.h>
 #include <WifiManager.h>
 
 #include "freertos/FreeRTOS.h"
@@ -40,6 +41,7 @@ public:
             m_pc_connection(std::move(pc_connection)),
             m_module_id(ConfigManager::get_module_id()),
             m_last_leader_updated(std::chrono::system_clock::now()){
+        OrientationDetection::init();
         update_leader();
 
         xTaskCreate(router_thread, "communication_router", 4096, this, 3, &this->m_router_thread);

@@ -5,13 +5,11 @@
 #include "mDNSDiscoveryService.h"
 #include "MPIMessageBuilder.h"
 #include "WifiManager.h"
-
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
-
 #include "Tables.h"
-
 #include "PtrQueue.h"
+#include "OrientationDetection.h"
 
 CommunicationRouter::~CommunicationRouter() {
     vTaskDelete(m_router_thread);
@@ -139,9 +137,13 @@ std::pair<std::vector<uint8_t>, std::vector<Orientation>> CommunicationRouter::g
         }
     }
 
-    // todo: get orientation (temporary)
     for (int i = 0; i < MAX_WIRED_CONNECTIONS; i++) {
-        connected_module_orientations[i] = Orientation_Deg0;
+        const auto id = connected_module_ids[i];
+        // if (const auto id = connected_module_ids[i]; 0 == id) {
+        //     connected_module_orientations[i] = Orientation_Deg0;
+        // } else {
+            connected_module_orientations[i] = OrientationDetection::get_orientation(id);
+        // }
     }
 
     return { connected_module_ids, connected_module_orientations };
