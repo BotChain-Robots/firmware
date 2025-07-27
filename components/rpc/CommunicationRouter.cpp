@@ -137,14 +137,11 @@ std::pair<std::vector<uint8_t>, std::vector<Orientation>> CommunicationRouter::g
         }
     }
 
-    for (int i = 0; i < MAX_WIRED_CONNECTIONS; i++) {
-        const auto id = connected_module_ids[i];
-        // if (const auto id = connected_module_ids[i]; 0 == id) {
-        //     connected_module_orientations[i] = Orientation_Deg0;
-        // } else {
-            connected_module_orientations[i] = OrientationDetection::get_orientation(id);
-        // }
-    }
+    // if (const auto id = connected_module_ids[0]; 0 == id) {
+    //     connected_module_orientations[0] = Orientation_Deg0;
+    // } else {
+        connected_module_orientations[0] = OrientationDetection::get_orientation(0);
+    // }
 
     return { connected_module_ids, connected_module_orientations };
 }
