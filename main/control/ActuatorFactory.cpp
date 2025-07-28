@@ -15,6 +15,8 @@ std::unique_ptr<IActuator> ActuatorFactory::create_actuator(const ModuleType typ
     switch (type) {
         case ModuleType_SERVO_1:
             return std::make_unique<Servo1Actuator>();
+        case ModuleType_SERVO_2:
+            return std::make_unique<Servo1Actuator>();
         case ModuleType_DC_MOTOR:
             return std::make_unique<DCMotorActuator>();
         default:
