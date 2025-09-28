@@ -33,11 +33,20 @@ typedef struct {
     size_t byte_index; //which byte is currently being encoded when transmitting
     uint8_t bit_index; //which bit in the `byte_index` is currently being encoded (into high/low waveforms)
     size_t num_symbols; //temp
-    #ifdef NRZ_INVERTED
-    bool current_level;
-    uint8_t zero_count;
-    #endif //NRZ_INVERTED
 } rmt_encoder_context_t;
+
+//will need to keep the data alive until it has been transmitted (not working or being used atm)
+struct TxCallbackContext{
+    SemaphoreHandle_t tx_done_sem;
+    QueueHandle_t transmit_queue;
+    rmt_encoder_context_t* tx_context;
+    QueueHandle_t free_mem_queue;
+};
+
+typedef struct {
+    uint8_t* data;
+    size_t length;
+} TxBuffer;
 
 typedef struct _rmt_channel{
     //TX
@@ -47,6 +56,7 @@ typedef struct _rmt_channel{
     QueueHandle_t tx_queue;
     rmt_encoder_handle_t encoder; //encoder config
     rmt_encoder_context_t encoder_context;
+    TxCallbackContext tx_context;
 
     //RX
     uint8_t rx_gpio;
@@ -85,6 +95,8 @@ class RMTManager{
         esp_err_t init_rx_channel();
         int decode_symbols(rmt_symbol_word_t* symbols, size_t num, rmt_symbol_word_t* decoded, size_t output_num);
         int convert_symbols_to_char(rmt_symbol_word_t* symbols, size_t num, uint8_t* string, size_t output_num);
+
+        [[noreturn]] static void freeMemory(void* args);
         
         rmt_channel channels[MAX_CHANNELS] = {0};
         //=====================TX=====================
@@ -102,7 +114,7 @@ class RMTManager{
         //will be used to temporarily hold the bits that are being wait to be sent -- not working
         // QueueHandle_t transmit_queue = NULL;
 
-        // TxCallbackContext tx_context;
+        QueueHandle_t memory_to_free;
 
         //=====================RX=====================
         rmt_channel_handle_t rx_chan;
@@ -123,19 +135,6 @@ class RMTManager{
 
         // bool ready_to_receive = false;
 };
-
-//will need to keep the data alive until it has been transmitted (not working or being used atm)
-
-struct TxCallbackContext{
-    SemaphoreHandle_t tx_done_sem;
-    QueueHandle_t transmit_queue;
-    rmt_encoder_context_t* tx_context;
-};
-
-typedef struct {
-    const uint8_t* data;
-    size_t length;
-} TxBuffer;
 
 typedef struct _gpio_channel_pair {
     gpio_num_t tx_pin;
