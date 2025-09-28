@@ -176,12 +176,18 @@ esp_err_t DataLinkManager::send(uint8_t dest_board, uint8_t* data, uint16_t data
             }
         };
 
-        ESP_LOGI(DEBUG_LINK_TAG, "Sending %d bytes", offset);
-        // print_buffer_binary(send_data, frame_size);
+        // ESP_LOGI(DEBUG_LINK_TAG, "Sending %d bytes", offset);
+        // printf("Sending Frame Information:\n");
+        // printf("%-10s %-12s %-13s %-15s %-12s %-10s %-6s\n",
+        // "Preamble", "Sender ID", "Receiver ID", "Sequence Num", "Type+Flag", "Data Len", "CRC");
+    
+        // printf("0x%02X       %-12d %-13d %-15d  0x%02X       %-10d   0x%04X\n",
+        // new_frame.preamble, new_frame.sender_id, new_frame.receiver_id, new_frame.seq_num, new_frame.type_flag, new_frame.data_len, new_frame.crc_16);
 
         uint8_t channel_to_route = MAX_CHANNELS;
         if (new_frame.receiver_id == BROADCAST_ADDR){
             for (uint8_t i = 0; i < num_channels; i++){
+                // printf("Sending on channel %d\n", i);
                 phys_comms->send(send_data, offset, &config, i);
             }
 
@@ -189,16 +195,12 @@ esp_err_t DataLinkManager::send(uint8_t dest_board, uint8_t* data, uint16_t data
             res = route_frame(new_frame.receiver_id, &channel_to_route);
     
             if (res != ESP_OK){
-                ESP_LOGE(DEBUG_LINK_TAG, "Failed to find entry for %d", new_frame.receiver_id);
+                // ESP_LOGE(DEBUG_LINK_TAG, "Failed to find entry for %d", new_frame.receiver_id);
                 return ESP_FAIL;
             }
-            ESP_LOGI(DEBUG_LINK_TAG, "Sending message to %d", new_frame.receiver_id);
+            // ESP_LOGI(DEBUG_LINK_TAG, "Sending message to %d", new_frame.receiver_id);
             phys_comms->send(send_data, offset, &config, channel_to_route);
         }
-
-        //can wait for the rmt to finish
-        // esp_err_t res = phys_comms->wait_until_send_complete(curr_channel); //this cannot be here in deployment but until the RMT manager can hold this copy of data this will have to be here
-    
         // if (res != ESP_OK){
         //     ESP_LOGE(DEBUG_LINK_TAG, "Failed to send message");
         //     return ESP_FAIL;
@@ -209,6 +211,7 @@ esp_err_t DataLinkManager::send(uint8_t dest_board, uint8_t* data, uint16_t data
     } else {
         //generic frame
         printf("not implemented yet\n");
+        return ESP_ERR_NOT_SUPPORTED;
     }
 
     return ESP_OK;
@@ -241,20 +244,29 @@ esp_err_t DataLinkManager::start_receive_frames(uint8_t curr_channel){
     return phys_comms->start_receiving(curr_channel);
 }
 
+/**
+ * @brief 
+ * 
+ * @param data 
+ * @param data_len 
+ * @param recv_len 
+ * @param curr_channel 
+ * @return esp_err_t 
+ */
 esp_err_t DataLinkManager::receive(uint8_t* data, size_t data_len, size_t* recv_len, uint8_t curr_channel){
     if (data == NULL){
         ESP_LOGE(DEBUG_LINK_TAG, "Invalid data array");
-        return ESP_FAIL;
+        return ESP_ERR_INVALID_ARG;
     }
     
     if (curr_channel >= num_channels){
         ESP_LOGE(DEBUG_LINK_TAG, "Invalid channel");
-        return ESP_FAIL;
+        return ESP_ERR_INVALID_ARG;
     }
 
     if (data_len < MAX_CONTROL_DATA_LEN + CONTROL_FRAME_OVERHEAD){
         ESP_LOGE(DEBUG_LINK_TAG, "Receive data buffer len is too small");
-        return ESP_FAIL;
+        return ESP_ERR_INVALID_ARG;
     }
     
     // uint8_t recv_buf[256];
@@ -263,38 +275,39 @@ esp_err_t DataLinkManager::receive(uint8_t* data, size_t data_len, size_t* recv_
 
     if (res != ESP_OK){
         ESP_LOGE(DEBUG_LINK_TAG, "RMT Failed to receive");
-        return ESP_FAIL;
+        return ESP_ERR_TIMEOUT;
     }
     
     if (*recv_len > MAX_CONTROL_DATA_LEN + CONTROL_FRAME_OVERHEAD){
         ESP_LOGE(DEBUG_LINK_TAG, "Invalid control frame");
-        return ESP_FAIL;
+        return ESP_ERR_INVALID_RESPONSE;
     }
 
     if (*recv_len < CONTROL_FRAME_OVERHEAD) {
-        return ESP_FAIL;
+        return ESP_ERR_INVALID_RESPONSE;
     }
 
     uint8_t* message = (uint8_t*)pvPortMalloc(CONTROL_FRAME_OVERHEAD + MAX_CONTROL_DATA_LEN);
     if (message == nullptr){
         ESP_LOGE(DEBUG_LINK_TAG, "Failed to malloc for receive");
-        return ESP_FAIL;
+        return ESP_ERR_NO_MEM;
     }
     memset(message, 0, sizeof(message));
     size_t message_size = 0;
     frame_header header;
     res = get_data_from_frame(data, *recv_len, message, &message_size, &header);
     if (res != ESP_OK){
+        // print_buffer_binary(message, message_size);
         vPortFree((void*)message);
-        return ESP_FAIL;
+        return res;
     }
     *recv_len = message_size;
     memcpy(data, message, message_size);
-    ESP_LOGI(DEBUG_LINK_TAG, "Received frame of type 0x%X destined for board %d", GET_TYPE(header.type_flag), header.receiver_id);
+    // ESP_LOGI(DEBUG_LINK_TAG, "Received frame of type 0x%X destined for board %d", GET_TYPE(header.type_flag), header.receiver_id);
     
     //check for a rip frame
     if (static_cast<FrameType>(GET_TYPE(header.type_flag)) == FrameType::RIP_TABLE_CONTROL){
-        printf("Got a RIP frame\n");
+        // printf("Got a RIP frame\n");
 
         for (size_t i = 0; i < message_size-1; i+=2){
             uint8_t board_id = message[i];
@@ -361,19 +374,19 @@ esp_err_t DataLinkManager::receive(uint8_t* data, size_t data_len, size_t* recv_
 esp_err_t DataLinkManager::get_data_from_frame(uint8_t* data, size_t data_len, uint8_t* message, size_t* message_size, frame_header* header){
     if (data == nullptr){
         ESP_LOGE(DEBUG_LINK_TAG, "Invalid data array");
-        return ESP_FAIL;
+        return ESP_ERR_INVALID_ARG;
     }
     if (message == nullptr){
         ESP_LOGE(DEBUG_LINK_TAG, "Invalid message array");
-        return ESP_FAIL;
+        return ESP_ERR_INVALID_ARG;
     }
     if (message_size == nullptr){
         ESP_LOGE(DEBUG_LINK_TAG, "Invalid message size ptr");
-        return ESP_FAIL;
+        return ESP_ERR_INVALID_ARG;
     }
     if (header == nullptr){
         ESP_LOGE(DEBUG_LINK_TAG, "Invalid header ptr");
-        return ESP_FAIL;
+        return ESP_ERR_INVALID_ARG;
     }
 
     if (IS_CONTROL_FRAME(data[5])){
@@ -386,12 +399,12 @@ esp_err_t DataLinkManager::get_data_from_frame(uint8_t* data, size_t data_len, u
     
         if (header->data_len > data_len){
             ESP_LOGE(DEBUG_LINK_TAG, "Mismatch data length in control frame");
-            return ESP_FAIL;
+            return ESP_ERR_INVALID_RESPONSE;
         }
 
         if (header->data_len == 0){
             ESP_LOGE(DEBUG_LINK_TAG, "Data len 0");
-            return ESP_FAIL;
+            return ESP_ERR_INVALID_SIZE;
         }
 
         *message_size = header->data_len;
@@ -399,19 +412,22 @@ esp_err_t DataLinkManager::get_data_from_frame(uint8_t* data, size_t data_len, u
         memcpy(message, &data[8], header->data_len);
     
         geneate_crc_16(data, 8*sizeof(uint8_t) + header->data_len, &header->crc_16);
+
+        uint16_t crc_calc = ((uint16_t)data[8 + header->data_len] | ((uint16_t)data[9 + header->data_len] << 8));
     
-        if (((uint16_t)data[8 + header->data_len] | ((uint16_t)data[9 + header->data_len] << 8)) != header->crc_16){
+        if (crc_calc != header->crc_16){
             //CRC mismatch
             ESP_LOGE(DEBUG_LINK_TAG, "CRC Mismatch");
-            return ESP_FAIL;
+            ESP_LOGE(DEBUG_LINK_TAG, "Got 0x%04X but calculated 0x%04X\n", crc_calc, header->crc_16);
+            return ESP_ERR_INVALID_CRC;
         }
     
-        printf("Frame Information:\n");
-        printf("%-10s %-12s %-13s %-15s %-12s %-10s %-6s\n",
-        "Preamble", "Sender ID", "Receiver ID", "Sequence Num", "Type+Flag", "Data Len", "CRC");
+        // printf("Received Frame Information:\n");
+        // printf("%-10s %-12s %-13s %-15s %-12s %-10s %-6s\n",
+        // "Preamble", "Sender ID", "Receiver ID", "Sequence Num", "Type+Flag", "Data Len", "CRC");
     
-        printf("0x%02X       %-12d %-13d %-15d  0x%02X       %-10d   0x%04X\n",
-        header->preamble, header->sender_id, header->receiver_id, header->seq_num, header->type_flag, header->data_len, header->crc_16);
+        // printf("0x%02X       %-12d %-13d %-15d  0x%02X       %-10d   0x%04X\n",
+        // header->preamble, header->sender_id, header->receiver_id, header->seq_num, header->type_flag, header->data_len, header->crc_16);
     } else {
         //not implemented yet
     }
@@ -448,7 +464,7 @@ esp_err_t DataLinkManager::geneate_crc_16(uint8_t* data, size_t data_len, uint16
 }
 
 esp_err_t DataLinkManager::print_frame_info(uint8_t* data, size_t data_len, uint8_t* message){
-    printf("Received frame of size %d:\n", data_len);
+    // printf("Received frame of size %d:\n", data_len);
 
     size_t message_size;
 
