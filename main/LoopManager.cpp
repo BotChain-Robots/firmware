@@ -14,7 +14,7 @@
 #define ACTUATOR_CMD_TAG 5
 #define TOPOLOGY_CMD_TAG 6
 
-#define METADATA_PERIOD_MS 5000
+#define METADATA_PERIOD_MS 1000
 
 [[noreturn]] void LoopManager::control_loop() const {
     const auto actuator = ActuatorFactory::create_actuator(ConfigManager::get_module_type());
