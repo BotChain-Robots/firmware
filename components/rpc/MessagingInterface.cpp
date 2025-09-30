@@ -15,14 +15,14 @@ MessagingInterface::~MessagingInterface() {
     vQueueDelete(m_mpi_rx_queue);
     vSemaphoreDelete(m_map_semaphore);
 
-    for (const auto [_tag, queue] : m_tag_to_queue) {
+    for (const auto queue: m_tag_to_queue | std::views::values) {
         vQueueDelete(queue);
     }
 }
 
-int MessagingInterface::send(char* buffer, int size, int destination, int tag, bool durable) {
+int MessagingInterface::send(char* buffer, const int size, const int destination, const int tag, const bool durable) {
     Flatbuffers::MPIMessageBuilder builder;
-    const auto [mpi_buffer, mpi_size] = builder.build_mpi_message(Messaging::MessageType_PTP, ConfigManager::get_module_id(), destination, sequence_number++, durable, tag, std::vector<uint8_t>(buffer, buffer + size));
+    const auto [mpi_buffer, mpi_size] = builder.build_mpi_message(Messaging::MessageType_PTP, m_config_manager.get_module_id(), destination, m_sequence_number++, durable, tag, std::vector<uint8_t>(buffer, buffer + size));
 
     m_router->send_msg(static_cast<char *>(mpi_buffer), mpi_size);
     return 0;

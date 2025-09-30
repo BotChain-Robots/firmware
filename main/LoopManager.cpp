@@ -17,7 +17,7 @@
 #define METADATA_PERIOD_MS 1000
 
 [[noreturn]] void LoopManager::control_loop() const {
-    const auto actuator = ActuatorFactory::create_actuator(ConfigManager::get_module_type());
+    const auto actuator = ActuatorFactory::create_actuator(m_config_manager.get_module_type());
 
     uint8_t buffer[512];
     while (true) {
@@ -38,7 +38,7 @@
             casted_orientations.emplace_back(orientation);
         }
 
-        const auto [data, size] = topology_message_builder->build_topology_message(ConfigManager::get_module_id(), ConfigManager::get_module_type(), module_ids, casted_orientations);
+        const auto [data, size] = topology_message_builder->build_topology_message(that->m_config_manager.get_module_id(), that->m_config_manager.get_module_type(), module_ids, casted_orientations);
         that->m_messaging_interface->send(static_cast<char *>(data), size, PC_ADDR, TOPOLOGY_CMD_TAG, true);
         vTaskDelay(METADATA_PERIOD_MS / portTICK_PERIOD_MS);
     }

@@ -2,15 +2,16 @@
 // Created by Johnathon Slightham on 2025-07-26.
 //
 
-#include <constants/module.h>
+#include "constants/module.h"
 #include "OrientationDetection.h"
+#include "ConfigManager.h"
+#include "iostream"
 
-#include <ConfigManager.h>
-#include <iostream>
-#include <bits/ostream.tcc>
+#define TAG "OrientationDetection"
 
 void OrientationDetection::init() {
-    for (int i = 0; i < MODULE_TO_NUM_CHANNELS_MAP[ConfigManager::get_module_type()]; i++) {
+    const auto& config_manager = ConfigManager::get_instance();
+    for (int i = 0; i < MODULE_TO_NUM_CHANNELS_MAP[config_manager.get_module_type()]; i++) {
         setup_gpio(static_cast<gpio_num_t>(CHANNEL_TO_0_DEG_MAP[i]));
         setup_gpio(static_cast<gpio_num_t>(CHANNEL_TO_90_DEG_MAP[i]));
         setup_gpio(static_cast<gpio_num_t>(CHANNEL_TO_180_DEG_MAP[i]));
@@ -20,16 +21,16 @@ void OrientationDetection::init() {
 
 Orientation OrientationDetection::get_orientation(const uint8_t channel) {
     if (gpio_get_level(static_cast<gpio_num_t>(CHANNEL_TO_90_DEG_MAP[channel]))) {
-        std::cout << "90deg" << std::endl;
+        ESP_LOGD(TAG, "90deg");
         return Orientation_Deg90;
     } else if (gpio_get_level(static_cast<gpio_num_t>(CHANNEL_TO_180_DEG_MAP[channel]))) {
-        std::cout << "180deg" << std::endl;
+        ESP_LOGD(TAG, "180deg");
         return Orientation_Deg180;
     } else if (gpio_get_level(static_cast<gpio_num_t>(CHANNEL_TO_270_DEG_MAP[channel]))) {
-        std::cout << "270deg" << std::endl;
+        ESP_LOGD(TAG, "270deg");
         return Orientation_Deg270;
     } else {
-        std::cout << "No orientation detected" << std::endl;
+        ESP_LOGD(TAG, "No orientation detected");
         return Orientation_Deg0;
     }
 }

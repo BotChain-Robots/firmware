@@ -13,7 +13,7 @@
 template <typename T>
 class PtrQueue {
 public:
-    explicit PtrQueue(UBaseType_t queueLength)
+    explicit PtrQueue(const UBaseType_t queueLength)
         : queue(xQueueCreate(queueLength, sizeof(T*))) {}
 
     ~PtrQueue() {
