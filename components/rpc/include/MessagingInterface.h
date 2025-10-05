@@ -14,8 +14,9 @@
 class MessagingInterface {
 public:
     explicit MessagingInterface(std::unique_ptr<WifiManager>&& pc_connection)
-        : m_mpi_rx_queue(xQueueCreate(MAX_RX_BUFFER_SIZE, RX_QUEUE_SIZE)),
-            m_router(std::make_unique<CommunicationRouter>([this](char* buffer, const int size) { handleRecv(buffer, size); }, std::move(pc_connection))),
+        : m_config_manager(ConfigManager::get_instance()),
+            m_mpi_rx_queue(xQueueCreate(MAX_RX_BUFFER_SIZE, RX_QUEUE_SIZE)),
+            m_router(std::make_unique<CommunicationRouter>([this](const char* buffer, const int size) { handleRecv(buffer, size); }, std::move(pc_connection))),
             m_map_semaphore(xSemaphoreCreateMutex()) {};
 
     ~MessagingInterface();
@@ -31,7 +32,8 @@ private:
 
     void checkOrInsertTag(uint8_t tag);
 
-    uint16_t sequence_number = 0;
+    ConfigManager& m_config_manager;
+    uint16_t m_sequence_number = 0;
     QueueHandle_t m_mpi_rx_queue; // todo: maybe move this down classes more
     std::unique_ptr<CommunicationRouter> m_router;
     SemaphoreHandle_t m_map_semaphore;

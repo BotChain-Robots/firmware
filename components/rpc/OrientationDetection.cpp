@@ -10,7 +10,8 @@
 #include <bits/ostream.tcc>
 
 void OrientationDetection::init() {
-    for (int i = 0; i < MODULE_TO_NUM_CHANNELS_MAP[ConfigManager::get_module_type()]; i++) {
+    const auto& config_manager = ConfigManager::get_instance();
+    for (int i = 0; i < MODULE_TO_NUM_CHANNELS_MAP[config_manager.get_module_type()]; i++) {
         setup_gpio(static_cast<gpio_num_t>(CHANNEL_TO_0_DEG_MAP[i]));
         setup_gpio(static_cast<gpio_num_t>(CHANNEL_TO_90_DEG_MAP[i]));
         setup_gpio(static_cast<gpio_num_t>(CHANNEL_TO_180_DEG_MAP[i]));

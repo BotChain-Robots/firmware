@@ -36,17 +36,18 @@ public:
     CommunicationRouter(const std::function<void(char*, int)> &rx_callback, std::unique_ptr<WifiManager>&& pc_connection)
         : m_tcp_rx_queue(std::make_shared<PtrQueue<std::vector<uint8_t>>>(10)),
             m_rx_callback(rx_callback),
+            m_config_manager(ConfigManager::get_instance()),
             m_tcp_server(std::make_unique<TCPServer>(TCP_PORT, m_tcp_rx_queue)),
-            m_data_link_manager(std::make_unique<DataLinkManager>(ConfigManager::get_module_id(), MODULE_TO_NUM_CHANNELS_MAP[ConfigManager::get_module_type()])),
+            m_data_link_manager(std::make_unique<DataLinkManager>(m_config_manager.get_module_id(), MODULE_TO_NUM_CHANNELS_MAP[m_config_manager.get_module_type()])),
             m_pc_connection(std::move(pc_connection)),
-            m_module_id(ConfigManager::get_module_id()),
+            m_module_id(m_config_manager.get_module_id()),
             m_last_leader_updated(std::chrono::system_clock::now()){
         OrientationDetection::init();
         update_leader();
 
         xTaskCreate(router_thread, "communication_router", 4096, this, 3, &this->m_router_thread);
 
-        const auto num_channels = MODULE_TO_NUM_CHANNELS_MAP[ConfigManager::get_module_type()];
+        const auto num_channels = MODULE_TO_NUM_CHANNELS_MAP[m_config_manager.get_module_type()];
         this->m_link_layer_threads.resize(num_channels);
         for (int i = 0; i < num_channels; i++) {
             auto *params = new link_layer_thread_params(this, i);
@@ -73,6 +74,7 @@ public:
     std::function<void(char*, int)> m_rx_callback;
 private:
     TaskHandle_t m_router_thread = nullptr;
+    ConfigManager &m_config_manager;
     std::vector<TaskHandle_t> m_link_layer_threads;
     std::unique_ptr<TCPServer> m_tcp_server; // todo: dependency injection
     std::unique_ptr<DataLinkManager> m_data_link_manager;

@@ -1,30 +1,9 @@
-#include "WifiManager.h"
-
-#include <ConfigManager.h>
-#include <esp_netif.h>
-#include <esp_event.h>
-#include <freertos/semphr.h>
 #include <cstring>
-#include <mDNSDiscoveryService.h>
 
-#include "freertos/FreeRTOS.h"
-#include "freertos/semphr.h"
-#include "esp_wifi.h"
+#include "WifiManager.h"
+#include "ConfigManager.h"
 #include "constants/wifi.h"
-
-WifiManager::WifiManager() {
-    esp_netif_init();
-    esp_wifi_set_storage(WIFI_STORAGE_RAM);
-    esp_event_loop_create_default();
-
-    this->m_mutex = xSemaphoreCreateMutex();
-    this->m_state = wifi_state::disconnected;
-    this->m_attempts = 0;
-    this->m_task = nullptr;
-    this->m_netif = nullptr;
-
-    xTaskCreate(reinterpret_cast<TaskFunction_t>(s_manage), "wifi_task", 3096, this, 5, &m_task);
-}
+#include "mDNSDiscoveryService.h"
 
 WifiManager::~WifiManager() {
     this->handle_disconnect();
@@ -103,8 +82,8 @@ int WifiManager::init_connection() {
         }
     };
 
-    std::string ssid = ConfigManager::get_wifi_ssid();
-    std::string pass = ConfigManager::get_wifi_password();
+    std::string ssid = m_config_manager.get_wifi_ssid();
+    std::string pass = m_config_manager.get_wifi_password();
     std::strncpy(reinterpret_cast<char *>(wifi_configuration.sta.ssid), ssid.c_str(), 32);
     std::strncpy(reinterpret_cast<char *>(wifi_configuration.sta.password), pass.c_str(), 64);
     wifi_configuration.sta.ssid[31] = '\0';
