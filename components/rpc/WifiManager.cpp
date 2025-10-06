@@ -5,6 +5,8 @@
 #include "constants/wifi.h"
 #include "mDNSDiscoveryService.h"
 
+#define TAG "WifiManager"
+
 WifiManager::~WifiManager() {
     this->handle_disconnect();
     vTaskDelete(this->m_task);
@@ -32,21 +34,21 @@ int WifiManager::disconnect() {
 
         switch (state) {
             case wifi_state::connect:
-                printf("Attempting to connect to wifi in station mode\n");
+                ESP_LOGI(TAG, "Attempting to connect to wifi in station mode\n");
                 init_connection();
                 update_state(wifi_state::connecting);
                 break;
             case wifi_state::connecting:
-                printf("connecting...\n");
+                ESP_LOGI(TAG, "connecting...\n");
                 handle_connecting();
                 break;
             case wifi_state::broadcast:
-                printf("Attempting to broadcast in softap mode\n");
+                ESP_LOGI(TAG, "Attempting to broadcast in softap mode\n");
                 init_softap();
                 update_state(wifi_state::broadcasting);
                 break;
             case wifi_state::disconnect:
-                printf("Shutting down wifi\n");
+                ESP_LOGI(TAG, "Shutting down wifi\n");
                 handle_disconnect();
                 update_state(wifi_state::disconnected);
                 break;
@@ -169,13 +171,13 @@ void WifiManager::wifi_event_handler(void *event_handler_arg, esp_event_base_t e
     const auto that = static_cast<WifiManager *>(event_handler_arg);
 
     if (WIFI_EVENT_STA_START == event_id) {
-        printf("Station mode started\n");
+        ESP_LOGI(TAG, "Station mode started\n");
     } else if (WIFI_EVENT_STA_CONNECTED == event_id) {
-        printf("Connected to wifi in station mode\n");
+        ESP_LOGI(TAG, "Connected to wifi in station mode\n");
         that->update_state(wifi_state::connected);
         mDNSDiscoveryService::setup();
     } else if (WIFI_EVENT_STA_DISCONNECTED == event_id) {
-        printf("Station mode shutdown\n");
+        ESP_LOGI(TAG, "Station mode shutdown\n");
         xSemaphoreTake(that->m_mutex, portMAX_DELAY);
         if (that->m_state == wifi_state::connected) {
             xSemaphoreGive(that->m_mutex);
@@ -185,13 +187,13 @@ void WifiManager::wifi_event_handler(void *event_handler_arg, esp_event_base_t e
             xSemaphoreGive(that->m_mutex);
         }
     } else if (IP_EVENT_STA_GOT_IP == event_id) {
-        printf("Got IP as station\n");
+        ESP_LOGI(TAG, "Got IP as station\n");
     } else if (WIFI_EVENT_AP_STACONNECTED == event_id) {
-        printf("User connected to AP\n");
+        ESP_LOGI(TAG, "User connected to AP\n");
     } else if (WIFI_EVENT_AP_STADISCONNECTED == event_id) {
-        printf("User disconnected from AP\n");
+        ESP_LOGI(TAG, "User disconnected from AP\n");
     } else if (WIFI_EVENT_AP_START == event_id) {
         mDNSDiscoveryService::setup();
-        printf("AP started\n");
+        ESP_LOGI(TAG, "AP started\n");
     }
 }

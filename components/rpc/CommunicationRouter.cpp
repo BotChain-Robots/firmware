@@ -1,15 +1,16 @@
-#include "CommunicationRouter.h"
-
-#include <AngleControlMessageBuilder.h>
 #include <iostream>
+
+#include "CommunicationRouter.h"
+#include "AngleControlMessageBuilder.h"
 #include "mDNSDiscoveryService.h"
 #include "MPIMessageBuilder.h"
 #include "WifiManager.h"
 #include "freertos/FreeRTOS.h"
-#include "freertos/queue.h"
 #include "Tables.h"
 #include "PtrQueue.h"
 #include "OrientationDetection.h"
+
+#define TAG "CommunicationRouter"
 
 CommunicationRouter::~CommunicationRouter() {
     vTaskDelete(m_router_thread);
@@ -24,7 +25,7 @@ CommunicationRouter::~CommunicationRouter() {
 
     while (true) {
         const auto buffer = that->m_tcp_rx_queue->dequeue();
-        std::cout << "routing from tcp" << std::endl;
+        ESP_LOGD(TAG, "Got message from TCP");
         that->route(buffer->data(), buffer->size());
     }
 }
@@ -35,10 +36,10 @@ CommunicationRouter::~CommunicationRouter() {
     const auto channel = params->channel;
     delete params;
 
-    char buffer[512];
     size_t bytes_received = 0;
     that->m_data_link_manager->start_receive_frames(channel);
     while (true) {
+        char buffer[512];
         // todo: very c style function calls
         const auto err = that->m_data_link_manager->receive(reinterpret_cast<uint8_t *>(buffer), 512, &bytes_received, channel);
         that->m_data_link_manager->start_receive_frames(channel);
@@ -46,7 +47,7 @@ CommunicationRouter::~CommunicationRouter() {
         // todo: do we only want one thread ever doing this?
         if (std::chrono::system_clock::now() - that->m_last_leader_updated > std::chrono::seconds(15)) {
             that->m_last_leader_updated = std::chrono::system_clock::now();
-            std::cout << "Updating leader" << std::endl;
+            ESP_LOGI(TAG, "Updating leader");
             that->update_leader();
         }
 
@@ -54,12 +55,13 @@ CommunicationRouter::~CommunicationRouter() {
             continue;
         }
 
-        std::cout << "routing message from rmt" << std::endl;
+        ESP_LOGD(TAG, "Got message from RMT");
         that->route(reinterpret_cast<uint8_t *>(buffer), bytes_received);
     }
 }
 
 int CommunicationRouter::send_msg(char* buffer, const size_t length) const {
+    ESP_LOGD(TAG, "Got message from application");
     route(reinterpret_cast<uint8_t *>(buffer), length);
     return 0;
 }
@@ -101,17 +103,16 @@ void CommunicationRouter::route(uint8_t* buffer, const size_t length) const {
     const auto& mpi_message = Flatbuffers::MPIMessageBuilder::parse_mpi_message(buffer);
 
     if (mpi_message->destination() == m_module_id) {
-        std::cout << "Routing to this module [dest:" << static_cast<int>(mpi_message->destination()) << ", length: " << length << "]" << std::endl;
-
+        ESP_LOGD(TAG, "Routing to this module [dest: %d, length: %d]", static_cast<int>(mpi_message->destination()), length);
         this->m_rx_callback(reinterpret_cast<char *>(buffer), 512);
     } else if (mpi_message->destination() == PC_ADDR && this->m_leader == m_module_id) {
-        std::cout << "Routing to wifi [dest:" << static_cast<int>(mpi_message->destination()) << ", length: " << length << "]" << std::endl;
+        ESP_LOGD(TAG, "Routing to wifi [dest: %d, length: %d]", static_cast<int>(mpi_message->destination()), length);
         this->m_tcp_server->send_msg(reinterpret_cast<char *>(buffer), 512);
     } else if (mpi_message->destination() == PC_ADDR) {
-        std::cout << "Routing to wireline for wifi [dest:" << static_cast<int>(mpi_message->destination()) << ", length: " << length << "]" << std::endl;
+        ESP_LOGD(TAG, "Routing to wireline for wifi [dest: %d, length: %d]", static_cast<int>(mpi_message->destination()), length);
         this->m_data_link_manager->send(this->m_leader, buffer, length, FrameType::MOTOR_TYPE, 0);
     }else {
-        std::cout << "Routing to wireline [dest:" << static_cast<int>(mpi_message->destination()) << ", length: " << length << "]" << std::endl;
+        ESP_LOGD(TAG, "Routing to wireline [dest: %d, length: %d]", static_cast<int>(mpi_message->destination()), length);
         this->m_data_link_manager->send(mpi_message->destination(), buffer, length, FrameType::MOTOR_TYPE, 0);
     }
 }

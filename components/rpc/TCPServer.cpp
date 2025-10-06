@@ -1,23 +1,22 @@
-#include <string.h>
+#include <iostream>
+#include <memory>
+#include <esp_log.h>
 #include <sys/param.h>
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_event.h"
 #include "esp_netif.h"
-
 #include "lwip/err.h"
 #include "lwip/sockets.h"
 #include "lwip/sys.h"
-#include <lwip/netdb.h>
-#include <iostream>
-
+#include "lwip/netdb.h"
 #include "TCPServer.h"
-
-#include <memory>
-#include <bits/shared_ptr_base.h>
-#include <constants/app_comms.h>
-
+#include "bits/shared_ptr_base.h"
+#include "constants/app_comms.h"
 #include "constants/tcp.h"
+
+#define TAG "TCPServer"
 
 // todo: - add message routing to correct client
 //       - authenticate (don't just return true from the auth function)
@@ -51,18 +50,18 @@ TCPServer::~TCPServer() {
     const auto that = static_cast<TCPServer*>(args);
 
     while (true) {
-        printf("Attempting to start TCP Server on port %d", that->m_port);
+        ESP_LOGI(TAG, "Attempting to start TCP Server on port %d", that->m_port);
 
         that->m_server_sock = socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
         if (that->m_server_sock < 0) {
-            printf("Unable to create TCP socket: errno %d\n", errno);
+            ESP_LOGE(TAG, "Unable to create TCP socket: errno %d\n", errno);
             vTaskDelay(SLEEP_AFTER_FAIL_MS / portTICK_PERIOD_MS);
             continue;
         }
 
         constexpr int opt = 1;
         setsockopt(that->m_server_sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
-        printf("Socket created\n");
+        ESP_LOGI(TAG, "Socket created\n");
 
         sockaddr_in server_addr = {
             .sin_family = AF_INET,
@@ -74,18 +73,18 @@ TCPServer::~TCPServer() {
 
         int err = bind(that->m_server_sock, reinterpret_cast<struct sockaddr *>(&server_addr), sizeof(server_addr));
         if (0 != err) {
-            printf("Socket unable to bind: errno %d\n", errno);
+            ESP_LOGE(TAG, "Socket unable to bind: errno %d\n", errno);
             close(that->m_server_sock);
             that->m_server_sock = -1;
             vTaskDelay(SLEEP_AFTER_FAIL_MS / portTICK_PERIOD_MS);
             continue;
         }
 
-        printf("Socket bound to port %d\n", that->m_port);
+        ESP_LOGI(TAG, "Socket bound to port %d\n", that->m_port);
 
         err = listen(that->m_server_sock, TCP_DEFAULT_LISTEN_BACKLOG);
         if (0 != err) {
-            printf("Error occurred during TCP listen: errno %d\n", errno);
+            ESP_LOGE(TAG, "Error occurred during TCP listen: errno %d\n", errno);
             close(that->m_server_sock);
             that->m_server_sock = -1;
             vTaskDelay(SLEEP_AFTER_FAIL_MS / portTICK_PERIOD_MS);
@@ -97,13 +96,13 @@ TCPServer::~TCPServer() {
             socklen_t addr_len = sizeof(client_addr);
             int client_sock = accept(that->m_server_sock, reinterpret_cast<struct sockaddr *>(&client_addr), &addr_len);
             if (client_sock < 0) {
-                printf("Unable to accept TCP connection: errno %d\n", errno);
+                ESP_LOGE(TAG, "Unable to accept TCP connection: errno %d\n", errno);
                 continue;
             }
 
             err = that->authenticate_client(client_sock);
             if (0 != err) {
-                printf("Client failed authentication\n");
+                ESP_LOGE(TAG, "Client failed authentication\n");
             }
 
             setsockopt(client_sock, SOL_SOCKET, SO_KEEPALIVE, &keepAlive, sizeof(int));
@@ -154,18 +153,17 @@ TCPServer::~TCPServer() {
                         continue;
                     }
 
-                    printf("Message size: %ld\n", msg_size);
+                    ESP_LOGD(TAG, "Message size: %ld\n", msg_size);
 
-                    int len = recv(sock, buffer->data(), msg_size, MSG_WAITALL);
-                    if (len < 0) {
-                        printf("Error occurred during receiving: errno %d\n", errno);
+                    if (int len = recv(sock, buffer->data(), msg_size, MSG_WAITALL); len < 0) {
+                        ESP_LOGE(TAG, "Error occurred during receiving: errno %d\n", errno);
                         to_remove.emplace_back(sock);
                     } else if (0 == len) {
-                        printf("Connection closed\n");
+                        ESP_LOGW(TAG, "Connection closed\n");
                         close(sock);
                         to_remove.emplace_back(sock);
                     } else {
-                        printf("TCP Server Received %d bytes\n", len);
+                        ESP_LOGD(TAG, "TCP Server Received %d bytes\n", len);
                         buffer->resize(len);
                         that->m_rx_queue->enqueue(std::move(buffer));
                     }
@@ -219,7 +217,6 @@ int TCPServer::send_msg(char *buffer, uint32_t length) const {
     }
 
     for (const auto client_sock : m_clients) {
-        std::cout << "sending tcp" << std::endl;
         send(client_sock, &length, 4, 0);
         send(client_sock, buffer, length, 0);
     }
