@@ -15,7 +15,7 @@ MessagingInterface::~MessagingInterface() {
     vQueueDelete(m_mpi_rx_queue);
     vSemaphoreDelete(m_map_semaphore);
 
-    for (const auto queue: m_tag_to_queue | std::views::values) {
+    for (const auto [_tag, queue] : m_tag_to_queue) {
         vQueueDelete(queue);
     }
 }
