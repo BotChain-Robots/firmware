@@ -572,7 +572,7 @@ esp_err_t RMTManager::receive(uint8_t* recv_buf, size_t size, size_t* output_siz
     rmt_rx_done_event_data_t rx_data;
     if (xQueueReceive(channels[channel_num].rx_queue, &rx_data, pdMS_TO_TICKS(15000)) != pdTRUE){ //this will wait until a message has arrived or not
         // printf("Timeout occurred while waiting for RX event\n");
-        ESP_LOGE(DEBUG_TAG, "Timeout occurred while waiting for RX event - didn't receive a message in time");
+        ESP_LOGW(DEBUG_TAG, "Timeout occurred while waiting for RX event - didn't receive a message in time");
         return ESP_FAIL;
     }
 

@@ -274,7 +274,7 @@ esp_err_t DataLinkManager::receive(uint8_t* data, size_t data_len, size_t* recv_
     esp_err_t res = phys_comms->receive(data, data_len, recv_len, curr_channel);
 
     if (res != ESP_OK){
-        ESP_LOGE(DEBUG_LINK_TAG, "RMT Failed to receive");
+        ESP_LOGW(DEBUG_LINK_TAG, "RMT Failed to receive");
         return ESP_ERR_TIMEOUT;
     }
     
