@@ -1,12 +1,11 @@
 #include "DataLinkManager.h"
 #include "RMTManager.h"
 #include "esp_log.h"
-#include "nvs_flash.h"
 
 /**
  * @brief Construct a new Data Link Manager:: Data Link Manager object
  * 
- * @param board_id Board ID of the current board. Will be written to the NVM under key "board" if not already written.
+ * @param board_id Board ID of the current board.
  */
 DataLinkManager::DataLinkManager(uint8_t board_id, uint8_t num_channels = MAX_CHANNELS){
     //init table for this board and set up link layer priority queue
@@ -16,18 +15,7 @@ DataLinkManager::DataLinkManager(uint8_t board_id, uint8_t num_channels = MAX_CH
         return;
     }
 
-    // if (get_board_id(this_board_id) != ESP_OK){
-        //failed to read from NVM for board id under key "board". Will write a new entry
-        this_board_id = board_id;
-        set_board_id(this_board_id);
-    // }
-
-    // if (this_board_id != board_id){
-    //     //NVM board id is different from `board_id` -> update entry to the new board id
-    //     this_board_id = board_id;
-    //     set_board_id(this_board_id);
-    // }
-
+    this->this_board_id = board_id;
     this->num_channels = num_channels;
 
     init_rip();
@@ -35,63 +23,6 @@ DataLinkManager::DataLinkManager(uint8_t board_id, uint8_t num_channels = MAX_CH
 
 DataLinkManager::~DataLinkManager(){
     phys_comms.reset(); //not strictly necessary to do this explicitly
-}
-
-esp_err_t DataLinkManager::set_board_id(uint8_t board_id){
-    if (board_id == BROADCAST_ADDR || board_id == PC_ADDR){
-        ESP_LOGE(DEBUG_LINK_TAG, "Invalid board id");
-        return ESP_FAIL;
-    }
-
-    nvs_handle_t handle;
-    esp_err_t res = nvs_open("board", NVS_READWRITE, &handle);
-    if (res != ESP_OK){
-        ESP_LOGE(DEBUG_LINK_TAG, "Failed to open NVS Handle");
-        return res;
-    }
-    
-    res = nvs_set_u8(handle, "id", board_id);
-    if (res != ESP_OK){
-        ESP_LOGE(DEBUG_LINK_TAG, "Failed to write ID %d to NVM", board_id);
-        nvs_close(handle);
-        return res;
-    }
-    
-    res = nvs_commit(handle);
-    if (res != ESP_OK){
-        ESP_LOGE(DEBUG_LINK_TAG, "Failed to commit write");
-        nvs_close(handle);
-        return res;
-    }
-    
-    this_board_id = board_id;
-    printf("Successfully wrote %d to NVM\n", board_id);
-
-    nvs_close(handle);
-
-    return ESP_OK;
-}
-
-esp_err_t DataLinkManager::get_board_id(uint8_t& board_id){
-    nvs_handle_t handle;
-    esp_err_t res = nvs_open("board", NVS_READWRITE, &handle);
-    if (res != ESP_OK){
-        ESP_LOGE(DEBUG_LINK_TAG, "Failed to open NVS Handle");
-        return res;
-    }
-
-    res = nvs_get_u8(handle, "id", &board_id);
-    if (res != ESP_OK){
-        ESP_LOGE(DEBUG_LINK_TAG, "Failed to get ID from NVM. Please make sure NVM is already assigned a board id!");
-        nvs_close(handle);
-        return res;
-    }
-
-    printf("Successfully got board id %d from NVM\n", board_id);
-
-    nvs_close(handle);
-    
-    return ESP_OK;
 }
 
 /**
@@ -274,7 +205,7 @@ esp_err_t DataLinkManager::receive(uint8_t* data, size_t data_len, size_t* recv_
     esp_err_t res = phys_comms->receive(data, data_len, recv_len, curr_channel);
 
     if (res != ESP_OK){
-        ESP_LOGE(DEBUG_LINK_TAG, "RMT Failed to receive");
+        ESP_LOGW(DEBUG_LINK_TAG, "RMT Failed to receive");
         return ESP_ERR_TIMEOUT;
     }
     

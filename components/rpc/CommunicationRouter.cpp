@@ -100,6 +100,13 @@ void CommunicationRouter::update_leader() {
 }
 
 void CommunicationRouter::route(uint8_t* buffer, const size_t length) const {
+	flatbuffers::Verifier verifier(buffer, length);
+	bool ok = Messaging::VerifyMPIMessageBuffer(verifier);
+	if (!ok) { // This could be moved to just be called on wireline data to save cpu cycles.
+		ESP_LOGW(TAG, "route: got an invalid MPI message, disregarding");
+		return;
+	}
+
     const auto& mpi_message = Flatbuffers::MPIMessageBuilder::parse_mpi_message(buffer);
 
     if (mpi_message->destination() == m_module_id) {

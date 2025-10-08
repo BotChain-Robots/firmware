@@ -30,8 +30,4 @@ namespace Flatbuffers {
 
         return {builder_.GetBufferPointer(), builder_.GetSize()};
     }
-
-    const Messaging::TopologyMessage* TopologyMessageBuilder::parse_topology_message(const uint8_t* buffer) {
-        return flatbuffers::GetRoot<Messaging::TopologyMessage>(buffer);
-    }
 }

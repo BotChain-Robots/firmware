@@ -23,8 +23,6 @@ namespace Flatbuffers {
             const std::vector<uint8_t>& channel_to_module,
             const std::vector<int8_t>& orientation_to_module);
 
-        static const Messaging::TopologyMessage* parse_topology_message(const uint8_t* buffer);
-
     private:
         flatbuffers::FlatBufferBuilder builder_;
     };
