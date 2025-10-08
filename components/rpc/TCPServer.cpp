@@ -124,6 +124,7 @@ TCPServer::~TCPServer() {
     const auto that = static_cast<TCPServer *>(args);
 
     while (true) {
+        vTaskDelay(1 / portTICK_PERIOD_MS); // Avoid starving other threads
         fd_set readfds;
         FD_ZERO(&readfds);
         int max_fd = -1;
@@ -135,7 +136,7 @@ TCPServer::~TCPServer() {
         }
         xSemaphoreGive(that->m_mutex);
 
-        timeval timeout = {1, 0}; // 1 second timeout
+        timeval timeout = {0, 100000}; // 100 ms timeout
         int ret = select(max_fd + 1, &readfds, nullptr, nullptr, &timeout);
 
         if (ret > 0) {
