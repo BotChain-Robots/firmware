@@ -37,6 +37,7 @@ private:
   int init_connection();
   int handle_connecting();
   int handle_disconnect();
+  int handle_broadcasting();
   int init_softap();
 
   static void wifi_event_handler(void *event_handler_arg, esp_event_base_t event_base, int32_t event_id, void *event_data);
