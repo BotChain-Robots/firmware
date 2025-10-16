@@ -6,6 +6,8 @@
 #include "mDNSDiscoveryService.h"
 
 #define TAG "WifiManager"
+#define SOFTAP_SCAN_FREQUENCY_MS 30000
+#define NUM_CONNECT_ATTEMPTS 5
 
 WifiManager::~WifiManager() {
     this->handle_disconnect();
@@ -32,25 +34,35 @@ int WifiManager::disconnect() {
         const auto state = this->m_state;
         xSemaphoreGive(this->m_mutex);
 
+        // Wifi state machine
         switch (state) {
             case wifi_state::connect:
-                ESP_LOGI(TAG, "Attempting to connect to wifi in station mode\n");
+                ESP_LOGI(TAG, "Attempting to connect to wifi in station mode");
                 init_connection();
                 update_state(wifi_state::connecting);
                 break;
             case wifi_state::connecting:
-                ESP_LOGI(TAG, "connecting...\n");
+                ESP_LOGI(TAG, "connecting...");
                 handle_connecting();
                 break;
             case wifi_state::broadcast:
-                ESP_LOGI(TAG, "Attempting to broadcast in softap mode\n");
+                ESP_LOGI(TAG, "Attempting to broadcast in softap mode");
                 init_softap();
                 update_state(wifi_state::broadcasting);
                 break;
+            case wifi_state::broadcasting:
+                ESP_LOGI(TAG, "Broadcasting in softap mode");
+                vTaskDelay(SOFTAP_SCAN_FREQUENCY_MS / portTICK_PERIOD_MS);  // only scan every 30 seconds, as we may disconnect users
+                handle_broadcasting();                                      // scans for known networks
+                break;
             case wifi_state::disconnect:
-                ESP_LOGI(TAG, "Shutting down wifi\n");
+                ESP_LOGI(TAG, "Shutting down wifi");
                 handle_disconnect();
                 update_state(wifi_state::disconnected);
+                break;
+            case wifi_state::disconnected:
+                ESP_LOGI(TAG, "Disconnected from wifi, starting back up");
+                update_state(wifi_state::connect);
                 break;
             default:
                 vTaskSuspend(nullptr);
@@ -101,7 +113,7 @@ int WifiManager::init_connection() {
 }
 
 int WifiManager::handle_connecting() {
-    if (this->m_attempts > 10) {
+    if (this->m_attempts > NUM_CONNECT_ATTEMPTS) {
         handle_disconnect();
         update_state(wifi_state::broadcast);
     }
@@ -121,7 +133,39 @@ int WifiManager::handle_disconnect() {
     esp_wifi_scan_stop();
     esp_wifi_disconnect();
     esp_wifi_stop();
+    esp_wifi_clear_ap_list();
+    esp_wifi_deinit();
 
+    return 0;
+}
+
+int WifiManager::handle_broadcasting() {
+    ESP_LOGI(TAG, "In softap mode, scanning for known networks");
+    wifi_scan_config_t scan_config {};
+    scan_config.ssid = reinterpret_cast<uint8_t *>(m_config_manager.get_wifi_ssid().data());
+    scan_config.scan_time = {.passive = 500};
+
+    if (const auto err = esp_wifi_scan_start(&scan_config, false); ESP_OK != err) {
+        ESP_LOGE(TAG, "Failed to scan for wifi networks, err: %d", err);
+        esp_wifi_clear_ap_list(); // must call to free memory allocated by scan.
+        return -1;
+    }
+
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+
+    uint16_t found_aps = 0;
+    if (const auto err = esp_wifi_scan_get_ap_num(&found_aps); ESP_OK != err) {
+        ESP_LOGE(TAG, "Failed to get count of scanned aps");
+        esp_wifi_clear_ap_list();
+        return -1;
+    }
+
+    if (found_aps > 1) {
+        ESP_LOGI(TAG, "Found a known network, switching to station mode");
+        update_state(wifi_state::disconnect);
+    }
+
+    esp_wifi_clear_ap_list(); // must call to free memory allocated by scan.
     return 0;
 }
 
@@ -151,7 +195,7 @@ int WifiManager::init_softap() {
         },
     };
 
-    esp_wifi_set_mode(WIFI_MODE_AP);
+    esp_wifi_set_mode(WIFI_MODE_APSTA); // enable both ap and station mode for scanning
     esp_wifi_set_config(static_cast<wifi_interface_t>(ESP_IF_WIFI_AP), &wifi_configuration);
 
     esp_wifi_start();
@@ -159,7 +203,7 @@ int WifiManager::init_softap() {
     return 0;
 }
 
-void WifiManager::update_state(wifi_state state) {
+void WifiManager::update_state(const wifi_state state) {
     xSemaphoreTake(this->m_mutex, portMAX_DELAY);
     this->m_attempts = 0;
     this->m_state = state;
@@ -182,7 +226,6 @@ void WifiManager::wifi_event_handler(void *event_handler_arg, esp_event_base_t e
         if (that->m_state == wifi_state::connected) {
             xSemaphoreGive(that->m_mutex);
             that->handle_disconnect();
-            that->update_state(wifi_state::connect);
         } else {
             xSemaphoreGive(that->m_mutex);
         }
