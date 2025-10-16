@@ -124,7 +124,8 @@ TCPServer::~TCPServer() {
     const auto that = static_cast<TCPServer *>(args);
 
     while (true) {
-        vTaskDelay(1 / portTICK_PERIOD_MS); // Avoid starving other threads
+        vTaskDelay(0); // Avoid starving other threads
+
         fd_set readfds;
         FD_ZERO(&readfds);
         int max_fd = -1;
@@ -136,13 +137,18 @@ TCPServer::~TCPServer() {
         }
         xSemaphoreGive(that->m_mutex);
 
-        timeval timeout = {0, 100000}; // 100 ms timeout
+        // todo: Select seems to be timing out the watchdog, even though we have a 50ms timeout.
+        //       Potentially select is not respecting our timeout?
+        timeval timeout = {0, 50000}; // 50 ms timeout
         int ret = select(max_fd + 1, &readfds, nullptr, nullptr, &timeout);
+
+        vTaskDelay(0); // Avoid starving other threads
 
         if (ret > 0) {
             xSemaphoreTake(that->m_mutex, portMAX_DELAY);
             std::vector<int> to_remove;
             for (int sock : that->m_clients) {
+                vTaskDelay(0); // Avoid starving other threads
                 if (FD_ISSET(sock, &readfds)) {
                     // Handle socket
                     auto buffer = std::make_unique<std::vector<uint8_t>>();
@@ -160,7 +166,7 @@ TCPServer::~TCPServer() {
                         ESP_LOGE(TAG, "Error occurred during receiving: errno %d\n", errno);
                         to_remove.emplace_back(sock);
                     } else if (0 == len) {
-                        ESP_LOGW(TAG, "Connection closed\n");
+                        ESP_LOGI(TAG, "TCP Connection closed\n");
                         close(sock);
                         to_remove.emplace_back(sock);
                     } else {
@@ -211,8 +217,6 @@ bool TCPServer::authenticate_client(int sock) {
 }
 
 int TCPServer::send_msg(char *buffer, uint32_t length) const {
-    // todo: should we assign a unique rank to each pc?
-
     if (!is_network_connected()) {
         return -1;
     }
