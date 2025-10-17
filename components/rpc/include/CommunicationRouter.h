@@ -55,15 +55,11 @@ public:
 
     [[noreturn]] static void router_thread(void *args);
     [[noreturn]] static void link_layer_thread(void *args);
-
     int send_msg(char* buffer, size_t length) const;
-
     void update_leader();
-
     void route(uint8_t *buffer, size_t length) const;
-
-    // pair of <module, mount orientation>
-    std::pair<std::vector<uint8_t>, std::vector<Orientation>> get_physically_connected_modules() const;
+    [[nodiscard]] std::pair<std::vector<uint8_t>, std::vector<Orientation>> get_physically_connected_modules() const;
+    [[nodiscard]] uint8_t get_leader() const;
 
     // todo: does this really need to be here (so i can access from thread)?
     std::shared_ptr<PtrQueue<std::vector<uint8_t>>> m_tcp_rx_queue;

@@ -20,7 +20,9 @@ namespace Flatbuffers {
             uint8_t module_id,
             ModuleType module_type,
             const std::vector<uint8_t>& channel_to_module,
-            const std::vector<int8_t>& orientation_to_module);
+            const std::vector<int8_t>& orientation_to_module,
+            Messaging::ConnectionType connection_type,
+            uint8_t leader);
 
     private:
         flatbuffers::FlatBufferBuilder builder_;

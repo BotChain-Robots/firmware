@@ -10,7 +10,9 @@ namespace Flatbuffers {
         const uint8_t module_id,
         const ModuleType module_type,
         const std::vector<uint8_t>& channel_to_module,
-        const std::vector<int8_t>& orientation_to_module) {
+        const std::vector<int8_t>& orientation_to_module,
+        const Messaging::ConnectionType connection_type,
+        const uint8_t leader) {
         builder_.Clear();
 
         const auto orientation_to_module_vector = builder_.CreateVector(orientation_to_module);
@@ -22,7 +24,9 @@ namespace Flatbuffers {
             module_type,
             channel_to_module.size(),
             channel_to_module_vector,
-            orientation_to_module_vector
+            orientation_to_module_vector,
+            connection_type,
+            leader
         );
 
         builder_.Finish(message);
