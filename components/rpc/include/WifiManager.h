@@ -1,13 +1,12 @@
 #ifndef NETWORKMANAGER_H
 #define NETWORKMANAGER_H
 
-#include <esp_netif_types.h>
-#include <esp_event.h>
-#include <esp_netif.h>
-#include <esp_wifi.h>
-#include <freertos/FreeRTOS.h>
-#include <freertos/semphr.h>
-
+#include "esp_netif_types.h"
+#include "esp_event.h"
+#include "esp_netif.h"
+#include "esp_wifi.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
 #include "ConfigManager.h"
 #include "IWifiManager.h"
 

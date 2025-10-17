@@ -2,13 +2,14 @@
 // Created by Johnathon Slightham on 2025-07-05.
 //
 
-#include "LoopManager.h"
 
 #include <iostream>
 #include <memory>
-#include <MessagingInterface.h>
-#include <TopologyMessageBuilder.h>
 
+#include "LoopManager.h"
+#include "MessagingInterface.h"
+#include "TopologyMessageBuilder.h"
+#include "control/ActuatorFactory.h"
 #include "esp_log.h"
 
 #define ACTUATOR_CMD_TAG 5

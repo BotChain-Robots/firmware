@@ -5,22 +5,18 @@
 #ifndef COMMUNICATIONROUTER_H
 #define COMMUNICATIONROUTER_H
 
-#include <ConfigManager.h>
 #include <functional>
 #include <memory>
 #include <chrono>
-#include <OrientationDetection.h>
-#include <WifiManager.h>
 
+#include "ConfigManager.h"
+#include "OrientationDetection.h"
+#include "WifiManager.h"
 #include "freertos/FreeRTOS.h"
-
 #include "TCPServer.h"
 #include "DataLinkManager.h"
 #include "constants/tcp.h"
 #include "constants/module.h"
-
-#include "flatbuffers_generated/TopologyMessage_generated.h"
-
 #include "PtrQueue.h"
 
 class CommunicationRouter {

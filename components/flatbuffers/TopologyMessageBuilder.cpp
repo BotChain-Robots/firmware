@@ -3,7 +3,6 @@
 //
 
 #include "TopologyMessageBuilder.h"
-
 #include "SerializedMessage.h"
 
 namespace Flatbuffers {

@@ -1,8 +1,7 @@
 #include "RMTManager.h"
-
+#include "RMTSymbols.h"
 #include "driver/rmt_tx.h"
 #include "driver/rmt_rx.h"
-
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include "esp_log.h"

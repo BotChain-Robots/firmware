@@ -5,10 +5,6 @@
 #ifndef ANGLECONTROLMESSAGEBUILDER_H_
 #define ANGLECONTROLMESSAGEBUILDER_H_
 
-#include <string>
-#include <vector>
-
-#include "SerializedMessage.h"
 #include "flatbuffers_generated/AngleControlMessage_generated.h"
 #include "flatbuffers/flatbuffers.h"
 

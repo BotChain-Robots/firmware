@@ -8,9 +8,9 @@
 #include <variant>
 #include <unordered_map>
 #include <shared_mutex>
-#include <esp_check.h>
-#include <nvs.h>
 
+#include "esp_check.h"
+#include "nvs.h"
 #include "flatbuffers_generated/RobotModule_generated.h"
 
 // Singleton to r/w config from the ESP32 nvs (thread safe and cached)

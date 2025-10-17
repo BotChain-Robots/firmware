@@ -7,10 +7,7 @@
 
 #include <memory>
 
-#include <MessagingInterface.h>
-
-#include "control/IActuator.h"
-#include "control/ActuatorFactory.h"
+#include "MessagingInterface.h"
 
 class LoopManager {
 public:

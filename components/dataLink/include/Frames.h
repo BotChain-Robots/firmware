@@ -1,9 +1,5 @@
 #ifdef DATA_LINK
 
-#include "freertos/FreeRTOS.h"
-#include <variant>
-#include <cstdint>
-
 #define BROADCAST_ADDR 0xFF //used for discovery (finding the board's neighbours). this will mean the board ids will have 2^8-2 = 254 unique IDs that could be assigned
 #define PC_ADDR 0x0 //setting 0 to be the PC
 

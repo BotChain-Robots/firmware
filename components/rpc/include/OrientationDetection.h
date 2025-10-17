@@ -4,7 +4,8 @@
 
 #ifndef ORIENTATIONDETECTION_H
 #define ORIENTATIONDETECTION_H
-#include <flatbuffers_generated/RobotModule_generated.h>
+
+#include "flatbuffers_generated/RobotModule_generated.h"
 #include "driver/gpio.h"
 
 class OrientationDetection {

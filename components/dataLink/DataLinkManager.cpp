@@ -1,6 +1,6 @@
+#include "esp_log.h"
 #include "DataLinkManager.h"
 #include "RMTManager.h"
-#include "esp_log.h"
 
 /**
  * @brief Construct a new Data Link Manager:: Data Link Manager object
