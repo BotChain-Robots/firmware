@@ -1,18 +1,16 @@
 #ifndef DATA_LINK
 #define DATA_LINK
 
-#include "Frames.h"
-#include "Tables.h"
+#include <queue>
+#include <memory>
+#include <unordered_map>
 
 #include "esp_event.h"
-
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
-
-#include <queue> //c++ priority queue
-#include <memory>
+#include "Frames.h"
+#include "Tables.h"
 #include "RMTManager.h"
-#include <unordered_map>
 
 #define DEBUG_LINK_TAG "LinkLayer"
 

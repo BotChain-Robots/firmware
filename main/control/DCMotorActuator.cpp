@@ -1,13 +1,8 @@
 #include "control/DCMotorActuator.h"
-
-
-#include <esp_attr.h>
-
+#include "esp_attr.h"
 #include "util/number_utils.h"
-
 #include "driver/ledc.h"
 #include "constants/module.h"
-
 #include "AngleControlMessageBuilder.h"
 
 #define LOW_DUTY 200

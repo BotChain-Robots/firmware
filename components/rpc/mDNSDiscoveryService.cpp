@@ -2,20 +2,16 @@
 // Created by Johnathon Slightham on 2025-05-25.
 //
 
-#include "mdns.h"
-
-#include "ConfigManager.h"
-
-#include "mDNSDiscoveryService.h"
-
-#include "constants/tcp.h"
 
 #include <string>
 #include <format>
-#include <iostream>
 #include <sstream>
 
-// todo: clean this up (strange to be a constructor) also need to add more details, need to add to routing table
+#include "mdns.h"
+#include "ConfigManager.h"
+#include "mDNSDiscoveryService.h"
+#include "constants/tcp.h"
+
 void mDNSDiscoveryService::setup() {
     mdns_init();
 

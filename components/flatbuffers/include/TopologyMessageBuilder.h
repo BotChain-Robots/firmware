@@ -5,7 +5,6 @@
 #ifndef TOPOLOGYMESSAGEBUILDER_H
 #define TOPOLOGYMESSAGEBUILDER_H
 
-#include <string>
 #include <vector>
 
 #include "SerializedMessage.h"

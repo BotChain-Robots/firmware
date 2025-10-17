@@ -3,7 +3,6 @@
 //
 
 #include "MPIMessageBuilder.h"
-
 #include "SerializedMessage.h"
 
 namespace Flatbuffers {

@@ -10,16 +10,14 @@
 #include <unordered_set>
 
 #include "freertos/FreeRTOS.h"
-
 #include "IRPCServer.h"
-
 #include "PtrQueue.h"
 
-class TCPServer : IRPCServer {
+class TCPServer final : IRPCServer {
 public:
     TCPServer(int port, const std::shared_ptr<PtrQueue<std::vector<uint8_t>>>& rx_queue);
-    ~TCPServer();
-    int send_msg(char* buffer, uint32_t length) const;
+    ~TCPServer() override;
+    int send_msg(char* buffer, uint32_t length) const override;
 
 private:
     bool authenticate_client(int client_sock);

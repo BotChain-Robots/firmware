@@ -5,7 +5,6 @@
 #ifndef MPIMESSAGEBUILDER_H
 #define MPIMESSAGEBUILDER_H
 
-#include <string>
 #include <vector>
 
 #include "SerializedMessage.h"

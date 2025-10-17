@@ -4,7 +4,6 @@
 
 #ifndef IACTUATOR_H
 #define IACTUATOR_H
-#include <cstdint>
 
 class IActuator {
 public:

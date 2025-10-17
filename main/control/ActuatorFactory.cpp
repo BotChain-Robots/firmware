@@ -5,10 +5,8 @@
 #include <memory>
 
 #include "control/ActuatorFactory.h"
-
 #include "control/DCMotorActuator.h"
 #include "control/Servo1Actuator.h"
-
 #include "flatbuffers_generated/RobotModule_generated.h"
 
 std::unique_ptr<IActuator> ActuatorFactory::create_actuator(const ModuleType type) {

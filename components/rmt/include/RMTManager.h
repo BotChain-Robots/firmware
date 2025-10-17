@@ -1,17 +1,14 @@
 #ifndef RMT_COMMUNICATIONS
 #define RMT_COMMUNICATIONS
 
-#include "esp_event.h"
+#include <cstring>
 
+#include "esp_event.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include "driver/rmt_tx.h"
 #include "driver/rmt_rx.h"
-
 #include "soc/gpio_num.h"
-#include "RMTSymbols.h"
-
-#include <cstring>
 
 #define MAX_CHANNELS 4
 #define RMT_SYMBOL_BLOCK_SIZE 48
