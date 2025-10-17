@@ -153,3 +153,7 @@ std::pair<std::vector<uint8_t>, std::vector<Orientation>> CommunicationRouter::g
 
     return { connected_module_ids, connected_module_orientations };
 }
+
+[[nodiscard]] uint8_t CommunicationRouter::get_leader() const {
+    return this->m_leader;
+}

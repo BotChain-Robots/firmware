@@ -39,7 +39,13 @@
             casted_orientations.emplace_back(orientation);
         }
 
-        const auto [data, size] = topology_message_builder->build_topology_message(that->m_config_manager.get_module_id(), that->m_config_manager.get_module_type(), module_ids, casted_orientations);
+        const auto [data, size] = topology_message_builder->build_topology_message(
+            that->m_config_manager.get_module_id(),
+            that->m_config_manager.get_module_type(),
+            module_ids,
+            casted_orientations,
+            that->m_messaging_interface->get_connection_type(),
+            that->m_messaging_interface->get_leader());
         that->m_messaging_interface->send(static_cast<char *>(data), size, PC_ADDR, TOPOLOGY_CMD_TAG, true);
         vTaskDelay(METADATA_PERIOD_MS / portTICK_PERIOD_MS);
     }

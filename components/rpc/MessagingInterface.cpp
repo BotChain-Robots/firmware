@@ -66,3 +66,14 @@ void MessagingInterface::checkOrInsertTag(const uint8_t tag) {
 std::pair<std::vector<uint8_t>, std::vector<Orientation>> MessagingInterface::get_physically_connected_modules() const {
     return m_router->get_physically_connected_modules();
 }
+
+Messaging::ConnectionType MessagingInterface::get_connection_type() const {
+    if (this->m_router->get_leader() == m_config_manager.get_module_id()) {
+        return Messaging::ConnectionType_DIRECT;
+    }
+    return Messaging::ConnectionType_HOP;
+}
+
+uint8_t MessagingInterface::get_leader() const {
+    return this->m_router->get_leader();
+}
