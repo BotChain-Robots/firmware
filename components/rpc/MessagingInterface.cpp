@@ -13,7 +13,7 @@ MessagingInterface::~MessagingInterface() {
     vQueueDelete(m_mpi_rx_queue);
     vSemaphoreDelete(m_map_semaphore);
 
-    for (const auto [_tag, queue] : m_tag_to_queue) {
+    for (const auto queue: m_tag_to_queue | std::views::values) {
         vQueueDelete(queue);
     }
 }
@@ -41,7 +41,9 @@ int MessagingInterface::recv(char* buffer, int size, int source, const int tag) 
     return 0;
 }
 
-int MessagingInterface::sendrecv(char* send_buffer, int send_size, int dest, int send_tag, char* recv_buffer, int recv_size, int recv_tag) {
+int MessagingInterface::sendrecv(char* send_buffer, const int send_size, const int dest, const int send_tag, char* recv_buffer, const int recv_size, const int recv_tag, const bool durable) {
+    send(send_buffer, send_size, dest, send_tag, durable);
+    recv(recv_buffer, recv_size, dest, recv_tag);
 
     return 0;
 }
