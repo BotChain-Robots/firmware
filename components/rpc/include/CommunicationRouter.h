@@ -12,7 +12,6 @@
 #include <chrono>
 
 #include "CommunicationFactory.h"
-#include "freertos/FreeRTOS.h"
 #include "IDiscoveryService.h"
 #include "ConfigManager.h"
 #include "OrientationDetection.h"
