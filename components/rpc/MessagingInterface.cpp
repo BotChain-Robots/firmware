@@ -5,6 +5,7 @@
 #include "MessagingInterface.h"
 #include "AngleControlMessageBuilder.h"
 #include "ConfigManager.h"
+#include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "freertos/semphr.h"
 #include "MPIMessageBuilder.h"

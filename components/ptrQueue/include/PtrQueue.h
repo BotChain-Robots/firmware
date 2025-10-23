@@ -6,7 +6,11 @@
 #define PTRQUEUE_H
 
 #include <memory>
-#include <iostream>
+
+#include "freertos/FreeRTOS.h"
+#include "portmacro.h"
+#include "freertos/projdefs.h"
+#include "freertos/queue.h"
 
 // Wrapped FreeRTOS queue to support unique_ptr
 

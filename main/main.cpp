@@ -5,8 +5,6 @@
 #include "sdkconfig.h"
 #include "ConfigManager.h"
 #include "LoopManager.h"
-#include "TCPServer.h"
-#include "WifiManager.h"
 #include "esp_log.h"
 
 extern "C" [[noreturn]] void app_main(void) {

@@ -1,9 +1,8 @@
 #include <cstring>
 
-#include "WifiManager.h"
+#include "wireless/WifiManager.h"
 #include "ConfigManager.h"
 #include "constants/wifi.h"
-#include "mDNSDiscoveryService.h"
 
 #define TAG "WifiManager"
 #define SOFTAP_SCAN_FREQUENCY_MS 30000
@@ -219,7 +218,6 @@ void WifiManager::wifi_event_handler(void *event_handler_arg, esp_event_base_t e
     } else if (WIFI_EVENT_STA_CONNECTED == event_id) {
         ESP_LOGI(TAG, "Connected to wifi in station mode\n");
         that->update_state(wifi_state::connected);
-        mDNSDiscoveryService::setup();
     } else if (WIFI_EVENT_STA_DISCONNECTED == event_id) {
         ESP_LOGI(TAG, "Station mode shutdown\n");
         xSemaphoreTake(that->m_mutex, portMAX_DELAY);
@@ -236,7 +234,6 @@ void WifiManager::wifi_event_handler(void *event_handler_arg, esp_event_base_t e
     } else if (WIFI_EVENT_AP_STADISCONNECTED == event_id) {
         ESP_LOGI(TAG, "User disconnected from AP\n");
     } else if (WIFI_EVENT_AP_START == event_id) {
-        mDNSDiscoveryService::setup();
         ESP_LOGI(TAG, "AP started\n");
     }
 }

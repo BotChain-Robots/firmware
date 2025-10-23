@@ -2,6 +2,8 @@
 // Created by Johnathon Slightham on 2025-05-25.
 //
 
+// todo: this class is getting a bit large
+
 #ifndef COMMUNICATIONROUTER_H
 #define COMMUNICATIONROUTER_H
 
@@ -9,13 +11,14 @@
 #include <memory>
 #include <chrono>
 
+#include "CommunicationFactory.h"
+#include "freertos/FreeRTOS.h"
+#include "IDiscoveryService.h"
 #include "ConfigManager.h"
 #include "OrientationDetection.h"
-#include "WifiManager.h"
-#include "freertos/FreeRTOS.h"
-#include "TCPServer.h"
+#include "wireless/WifiManager.h"
+#include "wireless/TCPServer.h"
 #include "DataLinkManager.h"
-#include "constants/tcp.h"
 #include "constants/module.h"
 #include "PtrQueue.h"
 
@@ -29,15 +32,16 @@ class CommunicationRouter {
     };
 
 public:
-    CommunicationRouter(const std::function<void(char*, int)> &rx_callback, std::unique_ptr<WifiManager>&& pc_connection)
+    explicit CommunicationRouter(const std::function<void(char*, int)> &rx_callback)
         : m_tcp_rx_queue(std::make_shared<PtrQueue<std::vector<uint8_t>>>(10)),
             m_rx_callback(rx_callback),
             m_config_manager(ConfigManager::get_instance()),
-            m_tcp_server(std::make_unique<TCPServer>(TCP_PORT, m_tcp_rx_queue)),
+            m_pc_connection(CommunicationFactory::create_connection_manager(m_config_manager.get_communication_method())),
+            m_lossless_server(CommunicationFactory::create_lossless_server(m_config_manager.get_communication_method(), m_tcp_rx_queue)),
             m_data_link_manager(std::make_unique<DataLinkManager>(m_config_manager.get_module_id(), MODULE_TO_NUM_CHANNELS_MAP[m_config_manager.get_module_type()])),
-            m_pc_connection(std::move(pc_connection)),
             m_module_id(m_config_manager.get_module_id()),
-            m_last_leader_updated(std::chrono::system_clock::now()){
+            m_last_leader_updated(std::chrono::system_clock::now()),
+            m_discovery_service(CommunicationFactory::create_discovery_service(m_config_manager.get_communication_method())){
         OrientationDetection::init();
         update_leader();
 
@@ -67,13 +71,14 @@ public:
 private:
     TaskHandle_t m_router_thread = nullptr;
     ConfigManager &m_config_manager;
+    std::unique_ptr<IConnectionManager> m_pc_connection;
     std::vector<TaskHandle_t> m_link_layer_threads;
-    std::unique_ptr<TCPServer> m_tcp_server; // todo: dependency injection
+    std::unique_ptr<IRPCServer> m_lossless_server;
     std::unique_ptr<DataLinkManager> m_data_link_manager;
-    std::unique_ptr<WifiManager> m_pc_connection; // todo: change to dependency inject
     uint8_t m_leader = 0;
     uint8_t m_module_id;
     std::chrono::time_point<std::chrono::system_clock> m_last_leader_updated;
+    std::unique_ptr<IDiscoveryService> m_discovery_service;
 };
 
 #endif //COMMUNICATIONROUTER_H

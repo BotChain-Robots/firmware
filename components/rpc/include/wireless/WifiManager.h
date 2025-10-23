@@ -8,9 +8,9 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include "ConfigManager.h"
-#include "IWifiManager.h"
+#include "IConnectionManager.h"
 
-class WifiManager final : IWifiManager {
+class WifiManager final : public IConnectionManager {
 public:
   WifiManager() : m_config_manager(ConfigManager::get_instance()),
                   m_mutex(xSemaphoreCreateMutex()),

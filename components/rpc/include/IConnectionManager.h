@@ -2,12 +2,12 @@
 // Created by Johnathon Slightham on 2025-05-26.
 //
 
-#ifndef IWIFIMANAGER_H
-#define IWIFIMANAGER_H
+#ifndef ICONNECTIONMANAGER_H
+#define ICONNECTIONMANAGER_H
 
-class IWifiManager {
+class IConnectionManager{
 public:
-    virtual ~IWifiManager() = default;
+    virtual ~IConnectionManager() = default;
     virtual int connect() = 0;
     virtual int disconnect() = 0;
 };

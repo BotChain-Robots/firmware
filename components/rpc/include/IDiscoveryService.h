@@ -8,8 +8,8 @@
 class IDiscoveryService {
 public:
     virtual ~IDiscoveryService() = default;
-    virtual static void setup() = 0;
-    virtual static void set_connected_boards(const std::vector<int>& boards) = 0;
-}
+
+    virtual void set_connected_boards(const std::vector<int>& boards) = 0;
+};
 
 #endif //IDISCOVERYSERVICE_H
