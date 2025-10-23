@@ -9,6 +9,7 @@
 
 #include <cstdint>
 #include "IActuator.h"
+#include "ISensor.h"
 
 class Servo1Actuator final : public IActuator {
 public:

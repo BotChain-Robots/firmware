@@ -9,10 +9,10 @@
 
 #include "mdns.h"
 #include "ConfigManager.h"
-#include "mDNSDiscoveryService.h"
+#include "wireless/mDNSDiscoveryService.h"
 #include "constants/tcp.h"
 
-void mDNSDiscoveryService::setup() {
+mDNSDiscoveryService::mDNSDiscoveryService() {
     mdns_init();
 
     const auto& config_manager = ConfigManager::get_instance();
@@ -30,6 +30,10 @@ void mDNSDiscoveryService::setup() {
     };
 
     mdns_service_txt_set("_robotcontrol", "_tcp", service_txt_data, 3);
+}
+
+mDNSDiscoveryService::~mDNSDiscoveryService() {
+    mdns_free();
 }
 
 void mDNSDiscoveryService::set_connected_boards(const std::vector<int>& boards) {

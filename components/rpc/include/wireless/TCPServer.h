@@ -13,7 +13,7 @@
 #include "IRPCServer.h"
 #include "PtrQueue.h"
 
-class TCPServer final : IRPCServer {
+class TCPServer final : public IRPCServer {
 public:
     TCPServer(int port, const std::shared_ptr<PtrQueue<std::vector<uint8_t>>>& rx_queue);
     ~TCPServer() override;

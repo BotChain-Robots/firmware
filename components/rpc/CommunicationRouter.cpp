@@ -2,9 +2,9 @@
 
 #include "CommunicationRouter.h"
 #include "AngleControlMessageBuilder.h"
-#include "mDNSDiscoveryService.h"
+#include "include/wireless/mDNSDiscoveryService.h"
 #include "MPIMessageBuilder.h"
-#include "WifiManager.h"
+#include "include/wireless/WifiManager.h"
 #include "freertos/FreeRTOS.h"
 #include "Tables.h"
 #include "PtrQueue.h"
@@ -19,7 +19,6 @@ CommunicationRouter::~CommunicationRouter() {
 // todo: we really need to change all char to uint8_t everywhere
 // todo: get rid of copying going on, need to pass around sharedptrs/uniqueptrs
 
-// todo: this needs to be combined with the 4 rmt threads
 [[noreturn]] void CommunicationRouter::router_thread(void *args) {
     const auto that = static_cast<CommunicationRouter *>(args);
 
@@ -40,7 +39,6 @@ CommunicationRouter::~CommunicationRouter() {
     that->m_data_link_manager->start_receive_frames(channel);
     while (true) {
         char buffer[512];
-        // todo: very c style function calls
         const auto err = that->m_data_link_manager->receive(reinterpret_cast<uint8_t *>(buffer), 512, &bytes_received, channel);
         that->m_data_link_manager->start_receive_frames(channel);
 
@@ -66,7 +64,6 @@ int CommunicationRouter::send_msg(char* buffer, const size_t length) const {
     return 0;
 }
 
-// todo: the number of things this is doing in so many different places is crazy...
 void CommunicationRouter::update_leader() {
     RIPRow_public table[RIP_MAX_ROUTES];
     size_t table_size = RIP_MAX_ROUTES;
@@ -95,26 +92,24 @@ void CommunicationRouter::update_leader() {
     this->m_leader = max;
 
     if (this->m_leader == m_module_id) {
-        mDNSDiscoveryService::set_connected_boards(connected_module_ids);
+        this->m_discovery_service->set_connected_boards(connected_module_ids);
     }
 }
 
 void CommunicationRouter::route(uint8_t* buffer, const size_t length) const {
 	flatbuffers::Verifier verifier(buffer, length);
-	bool ok = Messaging::VerifyMPIMessageBuffer(verifier);
-	if (!ok) { // This could be moved to just be called on wireline data to save cpu cycles.
+    // This could be moved to just be called on wireline data to save cpu cycles.
+    if (bool ok = Messaging::VerifyMPIMessageBuffer(verifier); !ok) {
 		ESP_LOGW(TAG, "route: got an invalid MPI message, disregarding");
 		return;
 	}
 
-    const auto& mpi_message = Flatbuffers::MPIMessageBuilder::parse_mpi_message(buffer);
-
-    if (mpi_message->destination() == m_module_id) {
+    if (const auto& mpi_message = Flatbuffers::MPIMessageBuilder::parse_mpi_message(buffer); mpi_message->destination() == m_module_id) {
         ESP_LOGD(TAG, "Routing to this module [dest: %d, length: %d]", static_cast<int>(mpi_message->destination()), length);
         this->m_rx_callback(reinterpret_cast<char *>(buffer), 512);
     } else if (mpi_message->destination() == PC_ADDR && this->m_leader == m_module_id) {
         ESP_LOGD(TAG, "Routing to wifi [dest: %d, length: %d]", static_cast<int>(mpi_message->destination()), length);
-        this->m_tcp_server->send_msg(reinterpret_cast<char *>(buffer), 512);
+        this->m_lossless_server->send_msg(reinterpret_cast<char *>(buffer), 512);
     } else if (mpi_message->destination() == PC_ADDR) {
         ESP_LOGD(TAG, "Routing to wireline for wifi [dest: %d, length: %d]", static_cast<int>(mpi_message->destination()), length);
         this->m_data_link_manager->send(this->m_leader, buffer, length, FrameType::MOTOR_TYPE, 0);

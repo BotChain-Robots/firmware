@@ -52,6 +52,12 @@ std::string ConfigManager::get_wifi_password() const {
     return str;
 }
 
+CommunicationMethod ConfigManager::get_communication_method() const {
+    uint16_t type = DEFAULT_COMMUNICATION_METHOD;
+    get_uint16(COMMUNICATION_METHOD_KEY, &type);
+    return static_cast<CommunicationMethod>(type);
+}
+
 esp_err_t ConfigManager::get_string(const char *key, std::string& out) const {
     std::shared_lock lock(rw_lock);
     esp_err_t ret = ESP_OK;
@@ -131,6 +137,10 @@ void ConfigManager::set_wifi_ssid(const char* ssid) {
 
 void ConfigManager::set_wifi_password(const char* password) {
     set<nvs_set_cpp_str, std::string>(WIFI_PASSWORD_KEY, password);
+}
+
+void ConfigManager::set_communication_method(const CommunicationMethod method) {
+    set<nvs_set_u16, uint16_t>(COMMUNICATION_METHOD_KEY, method);
 }
 
 // Func - the esp write function to call (ie. nvs_set_u16)

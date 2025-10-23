@@ -14,10 +14,10 @@
 
 class MessagingInterface {
 public:
-    explicit MessagingInterface(std::unique_ptr<WifiManager>&& pc_connection)
+    explicit MessagingInterface()
         : m_config_manager(ConfigManager::get_instance()),
             m_mpi_rx_queue(xQueueCreate(MAX_RX_BUFFER_SIZE, RX_QUEUE_SIZE)),
-            m_router(std::make_unique<CommunicationRouter>([this](const char* buffer, const int size) { handleRecv(buffer, size); }, std::move(pc_connection))),
+            m_router(std::make_unique<CommunicationRouter>([this](const char* buffer, const int size) { handleRecv(buffer, size); })),
             m_map_semaphore(xSemaphoreCreateMutex()) {};
 
     ~MessagingInterface();

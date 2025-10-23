@@ -18,13 +18,18 @@
 #define METADATA_PERIOD_MS 1000
 
 [[noreturn]] void LoopManager::control_loop() const {
-    const auto actuator = ActuatorFactory::create_actuator(m_config_manager.get_module_type());
+    const auto actuator = ActuatorFactory::create_actuator(m_config_manager.get_module_type()); // todo: this needs to be moved higher up with one factory that returns shared ptr for both actuator and sensor.
 
     uint8_t buffer[512];
     while (true) {
         m_messaging_interface->recv(reinterpret_cast<char *>(buffer), 512, PC_ADDR, ACTUATOR_CMD_TAG);
         actuator->actuate(buffer);
     }
+}
+
+
+[[noreturn]] void LoopManager::sensor_loop() const {
+    // todo: impl
 }
 
 [[noreturn]] void LoopManager::metadata_tx_loop(char * args) {

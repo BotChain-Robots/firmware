@@ -11,7 +11,7 @@
 #include "lwip/sockets.h"
 #include "lwip/sys.h"
 #include "lwip/netdb.h"
-#include "TCPServer.h"
+#include "wireless/TCPServer.h"
 #include "bits/shared_ptr_base.h"
 #include "constants/app_comms.h"
 #include "constants/tcp.h"
@@ -212,11 +212,11 @@ bool TCPServer::is_network_connected() {
 }
 
 bool TCPServer::authenticate_client(int sock) {
-    // todo: authentication (wait for a passphrase from the client)
+    // todo: authentication (key?)
     return 0;
 }
 
-int TCPServer::send_msg(char *buffer, uint32_t length) const {
+int TCPServer::send_msg(char *buffer, const uint32_t length) const {
     if (!is_network_connected()) {
         return -1;
     }

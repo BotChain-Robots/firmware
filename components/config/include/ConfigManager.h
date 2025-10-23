@@ -9,6 +9,7 @@
 #include <unordered_map>
 #include <shared_mutex>
 
+#include "enums.h"
 #include "esp_check.h"
 #include "nvs.h"
 #include "flatbuffers_generated/RobotModule_generated.h"
@@ -30,11 +31,13 @@ public:
     ModuleType get_module_type() const;
     std::string get_wifi_ssid() const;
     std::string get_wifi_password() const;
+    CommunicationMethod get_communication_method() const;
 
     void set_module_id(uint16_t id);
     void set_module_type(ModuleType type);
     void set_wifi_ssid(const char* ssid);
     void set_wifi_password(const char* password);
+    void set_communication_method(CommunicationMethod method);
 
 private:
     ConfigManager() = default;
