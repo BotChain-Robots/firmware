@@ -8,6 +8,8 @@
 class IRPCServer {
 public:
     virtual ~IRPCServer() = default;
+    virtual void startup() = 0;
+    virtual void shutdown() = 0;
     virtual int send_msg(char* buffer, uint32_t length) const = 0;
 };
 

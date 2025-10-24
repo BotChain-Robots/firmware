@@ -84,8 +84,12 @@ void CommunicationRouter::update_leader() {
     if (this->m_leader != max) {
         if (max == m_module_id) {
             m_pc_connection->connect();
+            m_lossless_server->startup();
+            // todo: BTS-22 add lossy server
         } else if (this->m_leader == m_module_id) {
             m_pc_connection->disconnect();
+            m_lossless_server->shutdown();
+            // todo: BTS-22 add lossy server
         }
     }
 

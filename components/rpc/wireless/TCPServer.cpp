@@ -30,15 +30,37 @@ TCPServer::TCPServer(const int port, const std::shared_ptr<PtrQueue<std::vector<
     this->m_rx_task = nullptr;
     this->m_rx_queue = rx_queue;
     this->m_server_sock = 0;
+}
+
+TCPServer::~TCPServer() {
+    this->shutdown();
+    vSemaphoreDelete(this->m_mutex);
+}
+
+void TCPServer::startup() {
+    ESP_LOGI(TAG, "Starting TCP server on port %d", this->m_port);
+    if (nullptr != this->m_task || nullptr != this->m_rx_task) {
+        ESP_LOGW(TAG, "Attempted to start TCP server when already started, ignoring start request");
+        return;
+    }
 
     xTaskCreate(tcp_server_task, "tcp_accept_server", 3072, this, 5, &this->m_task);
     xTaskCreate(socket_monitor_thread, "tcp_rx", 4096, this, 5, &this->m_rx_task);
 }
 
-TCPServer::~TCPServer() {
-    vTaskDelete(this->m_task);
-    vTaskDelete(this->m_rx_task);
-    vSemaphoreDelete(this->m_mutex);
+void TCPServer::shutdown() {
+    ESP_LOGI(TAG, "Shutting down TCP server");
+    if (nullptr != this->m_task) {
+        vTaskDelete(this->m_task);
+        close(this->m_server_sock);
+    }
+
+    if (nullptr != this->m_rx_task) {
+        vTaskDelete(this->m_rx_task);
+        for (const auto sock : this->m_clients) {
+            close(sock);
+        }
+    }
 }
 
 [[noreturn]] void TCPServer::tcp_server_task(void *args) {
@@ -179,6 +201,7 @@ TCPServer::~TCPServer() {
 
             for (const auto r : to_remove) {
                 that->m_clients.erase(r);
+                close(r);
             }
 
             xSemaphoreGive(that->m_mutex);

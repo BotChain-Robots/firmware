@@ -12,4 +12,4 @@ public:
     virtual int disconnect() = 0;
 };
 
-#endif //IWIFIMANAGER_H
+#endif //ICONNECTIONMANAGER_H
