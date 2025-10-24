@@ -17,6 +17,8 @@ class TCPServer final : public IRPCServer {
 public:
     TCPServer(int port, const std::shared_ptr<PtrQueue<std::vector<uint8_t>>>& rx_queue);
     ~TCPServer() override;
+    void startup() override;
+    void shutdown() override;
     int send_msg(char* buffer, uint32_t length) const override;
 
 private:

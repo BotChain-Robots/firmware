@@ -1,4 +1,3 @@
-#include <iostream>
 #include <memory>
 
 #include "esp_log.h"
@@ -18,6 +17,8 @@
 
 #define TAG "TCPServer"
 
+#define MIN(X, Y) (((X) < (Y)) ? (X) : (Y))
+
 // todo: - add message routing to correct client
 //       - authenticate (don't just return true from the auth function)
 //       - tx from board
@@ -30,15 +31,37 @@ TCPServer::TCPServer(const int port, const std::shared_ptr<PtrQueue<std::vector<
     this->m_rx_task = nullptr;
     this->m_rx_queue = rx_queue;
     this->m_server_sock = 0;
+}
+
+TCPServer::~TCPServer() {
+    this->shutdown();
+    vSemaphoreDelete(this->m_mutex);
+}
+
+void TCPServer::startup() {
+    ESP_LOGI(TAG, "Starting TCP server on port %d", this->m_port);
+    if (nullptr != this->m_task || nullptr != this->m_rx_task) {
+        ESP_LOGW(TAG, "Attempted to start TCP server when already started, ignoring start request");
+        return;
+    }
 
     xTaskCreate(tcp_server_task, "tcp_accept_server", 3072, this, 5, &this->m_task);
     xTaskCreate(socket_monitor_thread, "tcp_rx", 4096, this, 5, &this->m_rx_task);
 }
 
-TCPServer::~TCPServer() {
-    vTaskDelete(this->m_task);
-    vTaskDelete(this->m_rx_task);
-    vSemaphoreDelete(this->m_mutex);
+void TCPServer::shutdown() {
+    ESP_LOGI(TAG, "Shutting down TCP server");
+    if (nullptr != this->m_task) {
+        vTaskDelete(this->m_task);
+        close(this->m_server_sock);
+    }
+
+    if (nullptr != this->m_rx_task) {
+        vTaskDelete(this->m_rx_task);
+        for (const auto sock : this->m_clients) {
+            close(sock);
+        }
+    }
 }
 
 [[noreturn]] void TCPServer::tcp_server_task(void *args) {
@@ -131,15 +154,16 @@ TCPServer::~TCPServer() {
         int max_fd = -1;
 
         xSemaphoreTake(that->m_mutex, portMAX_DELAY);
+        if (that->m_clients.size() < 1) {
+            vTaskDelay(NO_CLIENT_SLEEP_MS / portTICK_PERIOD_MS);
+        }
         for (const auto sock : that->m_clients) {
             FD_SET(sock, &readfds);
             if (sock > max_fd) max_fd = sock;
         }
         xSemaphoreGive(that->m_mutex);
 
-        // todo: Select seems to be timing out the watchdog, even though we have a 50ms timeout.
-        //       Potentially select is not respecting our timeout?
-        timeval timeout = {0, 50000}; // 50 ms timeout
+        timeval timeout = {.tv_sec = 1, .tv_usec = 0}; // 1s timeout
         int ret = select(max_fd + 1, &readfds, nullptr, nullptr, &timeout);
 
         vTaskDelay(0); // Avoid starving other threads
@@ -150,17 +174,25 @@ TCPServer::~TCPServer() {
             for (int sock : that->m_clients) {
                 vTaskDelay(0); // Avoid starving other threads
                 if (FD_ISSET(sock, &readfds)) {
-                    // Handle socket
-                    auto buffer = std::make_unique<std::vector<uint8_t>>();
-                    buffer->resize(MAX_RX_BUFFER_SIZE);
 
                     uint32_t msg_size = 0;
-                    recv(sock, &msg_size, 4, MSG_WAITALL);
-                    if (msg_size < 1 || msg_size > 512) {
+                    if (int len = recv(sock, &msg_size, 4, MSG_WAITALL); len < 0) {
+                        ESP_LOGE(TAG, "Error occurred during receiving msg length: errno %d\n", errno);
+                        to_remove.emplace_back(sock);
+                        continue;
+                    } else if (0 == len) {
+                        ESP_LOGI(TAG, "TCP Connection closed when receiving msg length\n");
+                        close(sock);
+                        to_remove.emplace_back(sock);
                         continue;
                     }
 
-                    ESP_LOGD(TAG, "Message size: %ld\n", msg_size);
+                    if (msg_size < 1 || msg_size > MAX_RX_BUFFER_SIZE) {
+                        continue;
+                    }
+
+                    auto buffer = std::make_unique<std::vector<uint8_t>>();
+                    buffer->resize(MIN(MAX_RX_BUFFER_SIZE, msg_size));
 
                     if (int len = recv(sock, buffer->data(), msg_size, MSG_WAITALL); len < 0) {
                         ESP_LOGE(TAG, "Error occurred during receiving: errno %d\n", errno);
@@ -179,6 +211,7 @@ TCPServer::~TCPServer() {
 
             for (const auto r : to_remove) {
                 that->m_clients.erase(r);
+                close(r);
             }
 
             xSemaphoreGive(that->m_mutex);
@@ -228,4 +261,3 @@ int TCPServer::send_msg(char *buffer, const uint32_t length) const {
 
     return 0;
 }
-
