@@ -22,6 +22,8 @@
 
 #define QUEUE_SIZE 10
 
+#define MUTEX_MAX_WAIT_TICKS 100
+
 /**
  * @brief This struct keeps track of the current byte and bit index of the user data being transmmitted via RMT
  * 
@@ -66,7 +68,12 @@ typedef struct _rmt_channel{
     uint8_t status;
 } rmt_channel;
 
-
+/**
+ * @brief Class representing the RMT/Physical Layer
+ * 
+ * @author Justin Chow
+ * 
+ */
 class RMTManager{
     public:
         RMTManager(uint8_t num_channels);
@@ -100,26 +107,14 @@ class RMTManager{
 
         // rmt_channel_handle_t tx_chan;
 
-        const gpio_num_t tx_gpio[MAX_CHANNELS] = {GPIO_NUM_4, GPIO_NUM_5, GPIO_NUM_11, GPIO_NUM_13}; //using pins 1,2,3,4 for channels 0,1,2,3 respectively for tx
-        // gpio_num_t tx_gpio[MAX_CHANNELS] = {GPIO_NUM_1}; //using pins 1,2,3,4 for channels 0,1,2,3 respectively for tx
-
-        // rmt_encoder_context_t encoder_context = {0};
-
-        //semaphore to indicate it is done
-        // SemaphoreHandle_t tx_done_semaphore;
-        
-        //will be used to temporarily hold the bits that are being wait to be sent -- not working
-        // QueueHandle_t transmit_queue = NULL;
+        const gpio_num_t tx_gpio[MAX_CHANNELS] = {GPIO_NUM_4, GPIO_NUM_5, GPIO_NUM_11, GPIO_NUM_13}; //using pins 4,5,11,13 for channels 0,1,2,3 respectively for tx
 
         QueueHandle_t memory_to_free;
 
         //=====================RX=====================
         rmt_channel_handle_t rx_chan;
 
-        const gpio_num_t rx_gpio[MAX_CHANNELS] = {GPIO_NUM_3, GPIO_NUM_6, GPIO_NUM_12, GPIO_NUM_14}; //using pins 12,13,14,15 for channels 0,1,2,3 respectively for rx
-        // gpio_num_t rx_gpio[MAX_CHANNELS] = {GPIO_NUM_12}; //using pins 12,13,14,15 for channels 0,1,2,3 respectively for rx
-
-        // QueueHandle_t receive_queue = NULL;
+        const gpio_num_t rx_gpio[MAX_CHANNELS] = {GPIO_NUM_3, GPIO_NUM_6, GPIO_NUM_12, GPIO_NUM_14}; //using pins 3,6,12,14 for channels 0,1,2,3 respectively for rx
 
         //rx_receive_config
         rmt_receive_config_t receive_config = {
