@@ -1,12 +1,20 @@
 #ifdef DATA_LINK
+#pragma once
+#include "freertos/FreeRTOS.h"
+#include <variant>
+#include <cstdint>
+#include <vector>
 
 #define BROADCAST_ADDR 0xFF //used for discovery (finding the board's neighbours). this will mean the board ids will have 2^8-2 = 254 unique IDs that could be assigned
 #define PC_ADDR 0x0 //setting 0 to be the PC
 
 #define START_OF_FRAME 0xAB //0b1010_1011 - denotes the start of frame
 
-#define MAX_GENERIC_DATA_LEN (1 << 16) //Max 65.5KiB
 #define MAX_CONTROL_DATA_LEN (1 << 8) // Max 256B
+
+#define MAX_GENERIC_NUM_FRAG (1 << 16) // Max 2**16 Fragments can be made with a generic frame (total 2**16 *MAX_CONTROL_DATA_LEN B of data can be sent ~ 16 MiB)
+
+#define MAX_FRAME_QUEUE_SIZE 15 //Size of the queue for the frame scheduler (per channel)
 
 //Flags
 #define FLAG_FRAG 0x8 //0b1000 //this fragmented frame is part of a larger frame
@@ -20,7 +28,7 @@
 #define IS_CONTROL_FRAME(x) (((x) & 0x80) != 0)
 
 #define CONTROL_FRAME_OVERHEAD 9
-#define GENERIC_FRAME_OVERHEAD 12
+#define GENERIC_FRAME_OVERHEAD 14
 
 #define CONTROL_FRAME_TYPE 0x80 //if the frame type MSB is set to 1, use the control frame
 //Types (total 2^4 = 16 different types)
@@ -45,7 +53,7 @@ typedef struct _control_frame{
     uint16_t data_len; //Data Length (max 256B)
     uint8_t data[MAX_CONTROL_DATA_LEN]; //Variable Length of Data
     uint16_t crc_16; //CRC-16
-} control_frame; //this will have a max size of 9 + 256B = 265B
+} ControlFrame; //this will have a max size of 9 + 256B = 265B
 
 typedef struct _data_link_frame{
     uint8_t preamble; //Start of Frame
@@ -53,11 +61,12 @@ typedef struct _data_link_frame{
     uint8_t receiver_id; //receiver board id
     uint16_t seq_num; //sequence number to differentiate frames being sent from sender to receiver
     uint8_t type_flag; //(type << 4) | flag - both are 4 bits
-    uint16_t frag_info; //(total_frag_num << 8) | frag_num - total_frag_num denotes the total number of fragmented frames to expect for this sequence number(?) and frag_num denotes the fragment frame  num
+    uint16_t total_frag; //total number of fragments for this sequence
+    uint16_t frag_num; //current fragment number
     uint16_t data_len; //Data Length (max 178B)
-    uint8_t data[MAX_GENERIC_DATA_LEN]; //Variable Length of Data
+    uint8_t data[MAX_CONTROL_DATA_LEN]; //Variable Length of Data
     uint16_t crc_16; //CRC-16
-} data_link_frame; //this will have a max size of ~65.5KiB
+} GenericFrame; //this will have a max size of 14 + 2^8 B = 270 B
 #pragma pack(pop)
 
 typedef struct _header{
@@ -66,8 +75,26 @@ typedef struct _header{
     uint8_t receiver_id; //receiver board id
     uint16_t seq_num; //sequence number to differentiate frames being sent from sender to receiver
     uint8_t type_flag; //(type << 4) | flag - both are 4 bits
-    uint16_t frag_info; //(total_frag_num << 8) | frag_num - total_frag_num denotes the total number of fragmented frames to expect for this sequence number(?) and frag_num denotes the fragment frame  num
+    uint32_t frag_info; //(total_frag_num << 16) | frag_num - total_frag_num denotes the total number of fragmented frames to expect for this sequence number(?) and frag_num denotes the fragment frame  num
     uint16_t data_len; //Data Length (max 178B)
     uint16_t crc_16; //CRC-16
-} frame_header;
+} FrameHeader;
+
+using Frame = std::variant<ControlFrame, GenericFrame>;
+
+ControlFrame make_control_frame_from_header(const FrameHeader& header); 
+
+GenericFrame make_generic_frame_from_header(const FrameHeader& header);
+
+typedef struct _fragment_metadata {
+    std::vector<GenericFrame> fragments;
+    uint16_t num_fragments_rx;
+} FragmentMetadata;
+
+typedef struct _receive_metadata{
+    uint8_t* data;
+    uint16_t data_len;
+    FrameHeader header;
+} Rx_Metadata;
+
 #endif //DATA_LINK

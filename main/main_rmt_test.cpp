@@ -18,7 +18,10 @@
 // #include "esp_log.h"
 
 // #define DATA_SIZE_TEST 270
-// #define BOARD_ID 1
+// //current board id
+// #define BOARD_ID 69
+// //board id to send to
+// #define RECEIVER_BOARD_ID 1
 
 // struct TaskArgs{
 //     DataLinkManager* link_layer_obj;
@@ -30,6 +33,7 @@
 // struct ReceviedFrame{
 //     uint8_t buf[MAX_CONTROL_DATA_LEN + CONTROL_FRAME_OVERHEAD]; //max 41B
 //     size_t len;
+//     FrameHeader header;
 // };
 
 // void receive_frames(void* arg){
@@ -51,41 +55,39 @@
 
 //     uint8_t recv_buf[DATA_SIZE_TEST];
 //     memset(recv_buf, 0, DATA_SIZE_TEST);
-//     size_t recv_len = 0;
 
 //     ReceviedFrame recv_frame = {};
 
-//     while(true){
-//         res = obj->start_receive_frames(curr_channel); // this will be moved to a separate thread with a shared queue
-//         if (res != ESP_OK){
-//             ESP_LOGE("thread", "Failed to start rx async job on thread %d", curr_channel);
-//             continue;
-//         }
+//     FrameHeader header = {};
 
-//         res = obj->receive(recv_buf, sizeof(recv_buf), &recv_len, curr_channel);
+//     while(true){          
+//         res = obj->async_receive(recv_buf, sizeof(recv_buf), &header, curr_channel);
+//         vTaskDelay(pdMS_TO_TICKS(10));
 //         if (res != ESP_OK){
 //             // ESP_LOGE("thread", "Failed to receive message on thread %d", curr_channel);
-//             if (res != ESP_FAIL) {
+//             if (res != ESP_ERR_NOT_FOUND) {
 //                 recv_frame.len = 0;
 //                 if (xQueueSendToBack(shared_queue, (void*)&recv_frame, (TickType_t) 10) != pdPASS){
 //                     ESP_LOGE("RX Job", "Failed to push received frame onto shared queue for channel %d", curr_channel);
 //                 }
-//             }
+//             } 
 //             continue;
 //         } else {
 //             // printf("Successfully receive message\n");
 //         }
 
-//         if (recv_len == 0){
+//         if (header.data_len == 0){
 //             continue;
 //         }
 
-//         recv_frame.len = recv_len;
-//         memcpy((void*)recv_frame.buf, (void*)recv_buf, recv_len);
+//         recv_frame.len = header.data_len;
+//         memcpy((void*)recv_frame.buf, (void*)recv_buf, header.data_len);
+//         recv_frame.header = header;
         
 //         if (xQueueSendToBack(shared_queue, (void*)&recv_frame, (TickType_t) 10) != pdPASS){
 //             ESP_LOGE("RX Job", "Failed to push received frame onto shared queue for channel %d", curr_channel);
 //         }
+
 //     }
 
 // }
@@ -116,7 +118,7 @@
     
 //     size_t recv_len = 0;
 //     uint8_t iteration = 0;
-//     esp_err_t res;
+//     esp_err_t res = ESP_OK;
     
 //     gptimer_handle_t gptimer = NULL;
 //     gptimer_config_t timer_config = {
@@ -162,7 +164,7 @@
 //             // snprintf(reinterpret_cast<char*>(send_buf), sizeof(send_buf), "%s RANDOM", mej.kssage); //modifying the data while it transmits shouldn't affect the actual transmission here
             
 //             if (res != ESP_OK){
-//                 ESP_LOGE("thread", "Failed to send message on thread %d", curr_channel);
+//                 ESP_LOGE("thread", "Failed to send message on thread %d. Error: 0x%x", curr_channel, res);
 //                 continue;
 //             } else {
 //                 // printf("Successfully sent message %s\n", send_buf);
@@ -181,41 +183,21 @@
 //             //receive fail
 //             num_incorrect++;
 //         } else {
-//             res = obj->print_frame_info(recv_frame.buf, recv_frame.len, recv_buf);
+//             // res = obj->print_frame_info(recv_frame.buf, recv_frame.len, recv_buf, DATA_SIZE_TEST);
             
 //             if (res != ESP_OK){
 //                 num_incorrect++;
 //                 // printf("Received %ld bad frames on tx/rx round %ld for thread %d\n", num_incorrect, total_transactions, curr_channel);
 //             } else {
-//                 // printf("Received message %s on channel %d on round %ld. Total bad frames %ld\n", recv_buf, curr_channel, total_transactions, num_incorrect);
+//                 // printf("Header information:\n");
+//                 // printf("Preamble\tTX ID\tRX ID\tSeq Num\tType/Flag\tFrag Info\tData Len\tCRC\n");
+//                 // printf("%X\t%d\t%d\t%d\t%X\t%ld\t%d\t%d\n",recv_frame.header.preamble, recv_frame.header.sender_id, recv_frame.header.receiver_id, recv_frame.header.seq_num, 
+//                 //     recv_frame.header.type_flag, recv_frame.header.frag_info, recv_frame.header.data_len, recv_frame.header.crc_16);
+//                 // printf("Received message '%.*s' on channel %d\n", recv_frame.len, recv_frame.buf, curr_channel);
 //             }
 //         }
 
 //         printf("Total received packets: %ld\tTotal packets corrupted: %ld\n", total_transactions, num_incorrect);
-    
-//         // iteration++;
-//         // if (iteration == 10){
-//         //     iteration = 0;
-//         //     // if (!receive_only){
-//         //     //     matrix_size = RIP_MAX_ROUTES;
-//         //     //     res = obj->get_network_toplogy(matrix, &matrix_size);
-//         //     //     if (res != ESP_OK){
-//         //     //         ESP_LOGE("multi", "Failed to get topology");
-//         //     //     } else {
-//         //     //         for (int i = 0; i < matrix_size; i++){
-//         //     //             printf("Table for board %d:\n", matrix[i].board_id);
-//         //     //             printf("board_id\t\tHops\t\tChannel\n");
-//         //     //             for (int j = 0; j < matrix[i].size; j++){
-//         //     //                 printf("%d\t\t%d\t\t%d\n", matrix[i].table[j].info.board_id, matrix[i].table[j].info.hops, matrix[i].table[j].channel);
-//         //     //             }
-//         //     //             printf("=====\n");
-
-//         //     //             //reset matrix
-//         //     //             matrix[i].size = RIP_MAX_ROUTES;
-//         //     //         }
-//         //     //     }
-//         //     // }
-//         // }
         
 //         // vTaskDelay(1000 /    portTICK_PERIOD_MS); // wait 1 second before trying to send again
 //         //reset temp buffers
@@ -282,7 +264,7 @@
 //     for (uint8_t i = 0; i < 1; i++){
 //         args[i].link_layer_obj = obj_to_send;
 //         args[i].task_id = i;
-//         args[i].receiver_id = 69;
+//         args[i].receiver_id = RECEIVER_BOARD_ID;
 //         args[i].receive_queue = xQueueCreate(10, sizeof(ReceviedFrame)); //queue storing up to 10 control frames
 //         xTaskCreate(multi_transceiver, "multi_transceiver", 4096, static_cast<void*>(&args[i]), 5, NULL);
 //         vTaskDelay(500 / portTICK_PERIOD_MS);

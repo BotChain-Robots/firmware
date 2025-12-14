@@ -31,6 +31,9 @@ esp_err_t RMTManager::init_tx_channel(){
     memory_to_free = xQueueCreate(15, sizeof(uint8_t*));
 
     xTaskCreate(RMTManager::freeMemory, "RIPFreeMem", 4096, static_cast<void*>(memory_to_free), 5, NULL);
+    memory_to_free = xQueueCreate(15, sizeof(uint8_t*));
+
+    xTaskCreate(RMTManager::freeMemory, "RIPFreeMem", 4096, static_cast<void*>(memory_to_free), 5, NULL);
 
     for (uint8_t i = 0; i < num_channels; i++){
         //setup encoder config
@@ -104,7 +107,7 @@ esp_err_t RMTManager::init_tx_channel(){
             .tx_done_sem = channels[i].tx_done_semaphore,
             .transmit_queue = channels[i].tx_queue,
             .tx_context = &channels[i].encoder_context,
-            .free_mem_queue = memory_to_free
+            .free_mem_queue = memory_to_free,
         };
 
         if (channels[i].tx_done_semaphore == NULL){
@@ -150,9 +153,12 @@ bool RMTManager::rmt_tx_done_callback(rmt_channel_handle_t channel, const rmt_tx
     QueueHandle_t free_queue = args->free_mem_queue;
     
     TxBuffer buf = {};
+    
     BaseType_t xTaskWokenByReceive = pdFALSE;
+    // xSemaphoreTakeFromISR(mutex, &xTaskWokenByReceive);
     xQueueReceiveFromISR(queue, static_cast<TxBuffer*>(&buf), &xTaskWokenByReceive); //remove from the queue
-   
+    // xSemaphoreGiveFromISR(mutex, &xTaskWokenByReceive);
+
     if (buf.data != nullptr){
         xQueueSendFromISR(free_queue, &buf.data, &xTaskWokenByReceive);
     }
@@ -397,10 +403,10 @@ esp_err_t RMTManager::send(uint8_t* data, size_t size, rmt_transmit_config_t* co
         return ESP_FAIL;
     }
 
-    memcpy((void*)(new_data_to_send_buf.data), data, size);
+    memcpy(new_data_to_send_buf.data, data, size);
 
-    if (xQueueSendToBack(channels[channel_num].tx_queue, (void*)&new_data_to_send_buf, (TickType_t) 10) != pdPASS){
-        vPortFree((void*)new_data_to_send_buf.data);
+    if (xQueueSendToBack(channels[channel_num].tx_queue, &new_data_to_send_buf, (TickType_t) MUTEX_MAX_WAIT_TICKS) != pdPASS){
+        vPortFree(new_data_to_send_buf.data);
         ESP_LOGE(DEBUG_TAG, "Failed to queue data");
         return ESP_FAIL;
     } 
@@ -528,12 +534,12 @@ esp_err_t RMTManager::start_receiving(uint8_t channel_num){
     }
 
     if (channels[channel_num].status == CHANNEL_LISTENING){
-        return ESP_OK; //failed to receive earlier; no need to start the async rx job again (alreayd running)
+        return ESP_ERR_NOT_FINISHED;
     }
 
     if (channels[channel_num].status == CHANNEL_NOT_READY_STATUS){
         ESP_LOGE(DEBUG_TAG, "RX Channel is not ready");
-        return ESP_FAIL;
+        return ESP_ERR_INVALID_STATE;
     }
 
     if (channels[channel_num].rx_rmt_handle == NULL){
@@ -544,7 +550,6 @@ esp_err_t RMTManager::start_receiving(uint8_t channel_num){
     esp_err_t res = rmt_receive(channels[channel_num].rx_rmt_handle, channels[channel_num].raw_symbols, sizeof(channels[channel_num].raw_symbols), &this->receive_config);
 
     if (res != ESP_OK){
-        // printf("Failed to start receive\n");
         ESP_LOGE(DEBUG_TAG, "Failed to start receive");
     }
 
@@ -556,7 +561,12 @@ esp_err_t RMTManager::start_receiving(uint8_t channel_num){
 /**
  * @brief Function to get the received messages
  * 
- * @return int 
+ * @param recv_buf Byte array of the received bytes
+ * @param size Size of the byte array
+ * @param output_size Pointer containing the received bytes (will be written)
+ * @param channel_num Physical channel pair to receive from
+ * 
+ * @return esp_err_t 
  */
 esp_err_t RMTManager::receive(uint8_t* recv_buf, size_t size, size_t* output_size, uint8_t channel_num){
     if (channel_num >= num_channels){
@@ -569,9 +579,9 @@ esp_err_t RMTManager::receive(uint8_t* recv_buf, size_t size, size_t* output_siz
     }
 
     rmt_rx_done_event_data_t rx_data;
-    if (xQueueReceive(channels[channel_num].rx_queue, &rx_data, pdMS_TO_TICKS(15000)) != pdTRUE){ //this will wait until a message has arrived or not
+    if (xQueueReceive(channels[channel_num].rx_queue, &rx_data, pdMS_TO_TICKS(150)) != pdTRUE){ //this will wait until a message has arrived or not
         // printf("Timeout occurred while waiting for RX event\n");
-        ESP_LOGW(DEBUG_TAG, "Timeout occurred while waiting for RX event - didn't receive a message in time");
+        // ESP_LOGE(DEBUG_TAG, "Timeout occurred while waiting for RX event - didn't receive a message in time");
         return ESP_FAIL;
     }
 
