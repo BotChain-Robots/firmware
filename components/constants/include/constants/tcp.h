@@ -13,6 +13,8 @@
 
 #define SLEEP_AFTER_FAIL_MS         5000
 
+#define NO_CLIENT_SLEEP_MS          400
+
 #define TCP_PORT                    3001
 
 #endif //TCP_H

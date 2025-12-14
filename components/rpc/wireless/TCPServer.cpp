@@ -1,4 +1,3 @@
-#include <iostream>
 #include <memory>
 
 #include "esp_log.h"
@@ -17,6 +16,8 @@
 #include "constants/tcp.h"
 
 #define TAG "TCPServer"
+
+#define MIN(X, Y) (((X) < (Y)) ? (X) : (Y))
 
 // todo: - add message routing to correct client
 //       - authenticate (don't just return true from the auth function)
@@ -153,15 +154,16 @@ void TCPServer::shutdown() {
         int max_fd = -1;
 
         xSemaphoreTake(that->m_mutex, portMAX_DELAY);
+        if (that->m_clients.size() < 1) {
+            vTaskDelay(NO_CLIENT_SLEEP_MS / portTICK_PERIOD_MS);
+        }
         for (const auto sock : that->m_clients) {
             FD_SET(sock, &readfds);
             if (sock > max_fd) max_fd = sock;
         }
         xSemaphoreGive(that->m_mutex);
 
-        // todo: Select seems to be timing out the watchdog, even though we have a 50ms timeout.
-        //       Potentially select is not respecting our timeout?
-        timeval timeout = {0, 50000}; // 50 ms timeout
+        timeval timeout = {.tv_sec = 1, .tv_usec = 0}; // 1s timeout
         int ret = select(max_fd + 1, &readfds, nullptr, nullptr, &timeout);
 
         vTaskDelay(0); // Avoid starving other threads
@@ -172,17 +174,25 @@ void TCPServer::shutdown() {
             for (int sock : that->m_clients) {
                 vTaskDelay(0); // Avoid starving other threads
                 if (FD_ISSET(sock, &readfds)) {
-                    // Handle socket
-                    auto buffer = std::make_unique<std::vector<uint8_t>>();
-                    buffer->resize(MAX_RX_BUFFER_SIZE);
 
                     uint32_t msg_size = 0;
-                    recv(sock, &msg_size, 4, MSG_WAITALL);
-                    if (msg_size < 1 || msg_size > 512) {
+                    if (int len = recv(sock, &msg_size, 4, MSG_WAITALL); len < 0) {
+                        ESP_LOGE(TAG, "Error occurred during receiving msg length: errno %d\n", errno);
+                        to_remove.emplace_back(sock);
+                        continue;
+                    } else if (0 == len) {
+                        ESP_LOGI(TAG, "TCP Connection closed when receiving msg length\n");
+                        close(sock);
+                        to_remove.emplace_back(sock);
                         continue;
                     }
 
-                    ESP_LOGD(TAG, "Message size: %ld\n", msg_size);
+                    if (msg_size < 1 || msg_size > MAX_RX_BUFFER_SIZE) {
+                        continue;
+                    }
+
+                    auto buffer = std::make_unique<std::vector<uint8_t>>();
+                    buffer->resize(MIN(MAX_RX_BUFFER_SIZE, msg_size));
 
                     if (int len = recv(sock, buffer->data(), msg_size, MSG_WAITALL); len < 0) {
                         ESP_LOGE(TAG, "Error occurred during receiving: errno %d\n", errno);
@@ -251,4 +261,3 @@ int TCPServer::send_msg(char *buffer, const uint32_t length) const {
 
     return 0;
 }
-
