@@ -4,7 +4,7 @@
 #include "nvs_flash.h"
 
 /**
- * @brief Construct a new Data Link Manager:: Data Link Manager object
+ * @brief Constructs a new Data Link Manager object
  * 
  * @param board_id Board ID of the current board. Will be written to the NVM under key "board" if not already written.
  */
@@ -16,13 +16,75 @@ DataLinkManager::DataLinkManager(uint8_t board_id, uint8_t num_channels = MAX_CH
         return;
     }
 
+    uint8_t existing_board_id = 0;
+    get_board_id(existing_board_id);
+
     this_board_id = board_id;
-    set_board_id(this_board_id);
+    if (existing_board_id != board_id){
+        set_board_id(this_board_id);
+    }
 
     this->num_channels = num_channels;
 
+    sequence_num_map_mutex = xSemaphoreCreateMutex();
+
     init_scheduler();
     init_rip();
+}
+
+/**
+ * @brief Returns if the link layer is ready to receive frames
+ * 
+ * @return esp_err_t 
+ */
+esp_err_t DataLinkManager::ready(){
+    return (phys_comms == nullptr || rip_broadcast_task == NULL || rip_ttl_task == NULL || scheduler_task == NULL || receive_task == NULL) ? ESP_FAIL : ESP_OK;
+}
+
+/**
+ * @brief Atomic function to get and post increment sequence number map
+ * 
+ * @param board_id 
+ * @param seq_num 
+ * @return esp_err_t 
+ */
+esp_err_t DataLinkManager::get_inc_sequence_num(uint8_t board_id, uint16_t* seq_num){
+    if (seq_num == NULL){
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    if (xSemaphoreTake(sequence_num_map_mutex, pdMS_TO_TICKS(SEQUENCE_NUM_MAP_MUTEX_MAX_WAIT_MS)) != pdTRUE){
+        return ESP_FAIL;
+    }
+
+    *seq_num = sequence_num_map[board_id]++;
+
+    xSemaphoreGive(sequence_num_map_mutex);
+    
+    return ESP_OK;
+}
+
+/**
+ * @brief Atomic function to get sequence number map
+ * 
+ * @param board_id 
+ * @param seq_num 
+ * @return esp_err_t 
+ */
+esp_err_t DataLinkManager::get_sequence_num(uint8_t board_id, uint16_t* seq_num){
+    if (seq_num == NULL){
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    if (xSemaphoreTake(sequence_num_map_mutex, pdMS_TO_TICKS(SEQUENCE_NUM_MAP_MUTEX_MAX_WAIT_MS)) != pdTRUE){
+        return ESP_FAIL;
+    }
+
+    *seq_num = sequence_num_map[board_id];
+
+    xSemaphoreGive(sequence_num_map_mutex);
+    
+    return ESP_OK;
 }
 
 DataLinkManager::~DataLinkManager(){
@@ -31,7 +93,7 @@ DataLinkManager::~DataLinkManager(){
     bool dummy = true;
     xQueueSend(manual_broadcasts, &dummy, 0);
 
-    vTaskDelay(pdMS_TO_TICKS(50)); //delay to allow tasks to be killed
+    vTaskDelay(pdMS_TO_TICKS(100)); //delay to allow tasks to be killed
 
     if (rip_broadcast_task == NULL){
         vTaskDelete(rip_broadcast_task);
@@ -45,6 +107,14 @@ DataLinkManager::~DataLinkManager(){
         vTaskDelete(scheduler_task);
         scheduler_task = NULL;
     }    
+    if (receive_task == NULL){
+        vTaskDelete(receive_task);
+        receive_task = NULL;
+    }    
+    if (send_ack_task == NULL){
+        vTaskDelete(send_ack_task);
+        send_ack_task = NULL;
+    }
 }
 
 esp_err_t DataLinkManager::set_board_id(uint8_t board_id){
@@ -54,13 +124,13 @@ esp_err_t DataLinkManager::set_board_id(uint8_t board_id){
     }
 
     nvs_handle_t handle;
-    esp_err_t res = nvs_open("board", NVS_READWRITE, &handle);
+    esp_err_t res = nvs_open(NVS_BOARD_NAMESPACE, NVS_READWRITE, &handle);
     if (res != ESP_OK){
         ESP_LOGE(DEBUG_LINK_TAG, "Failed to open NVS Handle");
         return res;
     }
-    
-    res = nvs_set_u8(handle, "id", board_id);
+
+    res = nvs_set_u8(handle, NVS_BOARD_ID_KEY, board_id);
     if (res != ESP_OK){
         ESP_LOGE(DEBUG_LINK_TAG, "Failed to write ID %d to NVM", board_id);
         nvs_close(handle);
@@ -75,7 +145,7 @@ esp_err_t DataLinkManager::set_board_id(uint8_t board_id){
     }
     
     this_board_id = board_id;
-    printf("Successfully wrote %d to NVM\n", board_id);
+    ESP_LOGI(DEBUG_LINK_TAG, "Successfully wrote %d to NVM", board_id);
 
     nvs_close(handle);
 
@@ -84,20 +154,20 @@ esp_err_t DataLinkManager::set_board_id(uint8_t board_id){
 
 esp_err_t DataLinkManager::get_board_id(uint8_t& board_id){
     nvs_handle_t handle;
-    esp_err_t res = nvs_open("board", NVS_READWRITE, &handle);
+    esp_err_t res = nvs_open(NVS_BOARD_NAMESPACE, NVS_READWRITE, &handle);
     if (res != ESP_OK){
         ESP_LOGE(DEBUG_LINK_TAG, "Failed to open NVS Handle");
         return res;
     }
 
-    res = nvs_get_u8(handle, "id", &board_id);
+    res = nvs_get_u8(handle, NVS_BOARD_ID_KEY, &board_id);
     if (res != ESP_OK){
         ESP_LOGE(DEBUG_LINK_TAG, "Failed to get ID from NVM. Please make sure NVM is already assigned a board id!");
         nvs_close(handle);
         return res;
     }
 
-    printf("Successfully got board id %d from NVM\n", board_id);
+    ESP_LOGI(DEBUG_LINK_TAG, "Successfully got board id %d from NVM", board_id);
 
     nvs_close(handle);
     
@@ -125,8 +195,8 @@ esp_err_t DataLinkManager::create_control_frame(uint8_t* data, uint16_t data_len
         return ESP_ERR_INVALID_ARG;
     }
 
-    if (data_len > MAX_CONTROL_DATA_LEN){
-        ESP_LOGE(DEBUG_LINK_TAG, "Data for control frame is too large. Maximum size is %d. Current data length is %d", MAX_CONTROL_DATA_LEN, data_len);
+    if (data_len > MAX_FRAME_SIZE){
+        ESP_LOGE(DEBUG_LINK_TAG, "Data for control frame is too large. Maximum size is %d. Current data length is %d", MAX_FRAME_SIZE, data_len);
         return ESP_ERR_INVALID_ARG;
     } 
 
@@ -181,6 +251,17 @@ esp_err_t DataLinkManager::create_control_frame(uint8_t* data, uint16_t data_len
     return ESP_OK;
 }
 
+/**
+ * @brief Helper function to create a generic frame
+ * 
+ * @param data 
+ * @param data_len 
+ * @param generic_frame 
+ * @param offset 
+ * @param send_data 
+ * @param send_data_len 
+ * @return esp_err_t 
+ */
 esp_err_t DataLinkManager::create_generic_frame(uint8_t* data, uint16_t data_len, GenericFrame generic_frame, uint16_t offset, uint8_t* send_data, size_t* send_data_len){
         if (data == nullptr){
         ESP_LOGE(DEBUG_LINK_TAG, "Data array does not exist");
@@ -192,8 +273,8 @@ esp_err_t DataLinkManager::create_generic_frame(uint8_t* data, uint16_t data_len
         return ESP_ERR_INVALID_ARG;
     }
 
-    if (data_len > MAX_CONTROL_DATA_LEN){
-        ESP_LOGE(DEBUG_LINK_TAG, "Data for control frame is too large. Maximum size is %d. Current data length is %d", MAX_CONTROL_DATA_LEN, data_len);
+    if (data_len > MAX_FRAME_SIZE){
+        ESP_LOGE(DEBUG_LINK_TAG, "Data for generic frame is too large. Maximum size is %d. Current data length is %d", MAX_FRAME_SIZE, data_len);
         return ESP_ERR_INVALID_ARG;
     } 
 
@@ -268,13 +349,18 @@ esp_err_t DataLinkManager::create_generic_frame(uint8_t* data, uint16_t data_len
 esp_err_t DataLinkManager::send(uint8_t dest_board, uint8_t* data, uint16_t data_len, FrameType type, uint8_t flag){
     bool isControlFrame = IS_CONTROL_FRAME((uint8_t)type);
     
-    if (isControlFrame && data_len > MAX_CONTROL_DATA_LEN){
-        //Control frames has max data size of MAX_CONTROL_DATA_LEN
+    if (isControlFrame && data_len > MAX_FRAME_SIZE){
+        //Control frames has max data size of MAX_FRAME_SIZE
         return ESP_ERR_INVALID_ARG;
     }
 
-    if (!isControlFrame && data_len > MAX_GENERIC_NUM_FRAG * MAX_CONTROL_DATA_LEN){
-        //Generic frames has max MAX_GENERIC_NUM_FRAG fragments, each max size of MAX_CONTROL_DATA_LEN (data size)
+    if (!isControlFrame && data_len > MAX_GENERIC_NUM_FRAG * MAX_GENERIC_DATA_LEN){
+        //Generic frames has max MAX_GENERIC_NUM_FRAG fragments, each max size of MAX_GENERIC_DATA_LEN (data size)
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    if (!isControlFrame && dest_board == BROADCAST_ADDR && type != FrameType::MISC_UDP_GENERIC_TYPE){
+        //If broadcasting generic frames, we don't to spam acks to this board
         return ESP_ERR_INVALID_ARG;
     }
     
@@ -293,9 +379,18 @@ esp_err_t DataLinkManager::send(uint8_t dest_board, uint8_t* data, uint16_t data
         if (data_len <= MAX_CONTROL_DATA_LEN){
             frag_info = (1 << 16); //1 total fragment required
         } else {
-            frag_info = (data_len / MAX_CONTROL_DATA_LEN + 1) << 16;
+            uint32_t total_frags = (data_len + MAX_GENERIC_DATA_LEN - 1) / MAX_GENERIC_DATA_LEN;
+            frag_info = (total_frags) << 16;
 
         }
+    }
+
+    uint16_t seq_num = 0;
+
+    esp_err_t res = get_inc_sequence_num(dest_board, &seq_num);
+    if (res != ESP_OK){
+        ESP_LOGE(DEBUG_LINK_TAG, "Failed atomic get increment sequence number map");
+        return res;
     }
 
     SchedulerMetadata metadata = {
@@ -303,7 +398,7 @@ esp_err_t DataLinkManager::send(uint8_t dest_board, uint8_t* data, uint16_t data
             .preamble = START_OF_FRAME,
             .sender_id = this_board_id,
             .receiver_id = dest_board,
-            .seq_num = sequence_num_map[dest_board]++,
+            .seq_num = seq_num,
             .type_flag = (uint8_t)((static_cast<uint8_t>(type) & 0xF0) | (flag & 0xF)),
             .frag_info = frag_info,
             .data_len = data_len,
@@ -313,10 +408,13 @@ esp_err_t DataLinkManager::send(uint8_t dest_board, uint8_t* data, uint16_t data
         .enqueue_time_ns = 0,
         .data = saved_data,
         .len = data_len,
+        .last_ack = 0,
+        .curr_fragment = 0,
+        .timeout = 0,
     };
 
     uint8_t channel = 0;
-    esp_err_t res = route_frame(dest_board, &channel);
+    res = route_frame(dest_board, &channel);
     
     if (res != ESP_OK){
         // ESP_LOGE(DEBUG_LINK_TAG, "Failed to route message to board %d", dest_board);
@@ -424,6 +522,10 @@ esp_err_t DataLinkManager::get_data_from_frame(uint8_t* data, size_t data_len, u
     header->seq_num = (uint16_t)data[3] | ((uint16_t)data[4] << 8);
     header->type_flag = data[5];
     if (IS_CONTROL_FRAME(data[5])){
+        if (data_len < 9){
+            return ESP_ERR_INVALID_SIZE;
+        }
+
         header->data_len = (uint16_t)data[6] | ((uint16_t)data[7] << 8);
     
         if (header->data_len > data_len){
@@ -437,6 +539,12 @@ esp_err_t DataLinkManager::get_data_from_frame(uint8_t* data, size_t data_len, u
         }
 
         *message_size = header->data_len;
+
+        if (*message_size > MAX_CONTROL_DATA_LEN || (10 + *message_size > data_len)){
+            ESP_LOGE(DEBUG_LINK_TAG, "Invalid payload length: %u", *message_size);
+            return ESP_ERR_INVALID_SIZE;
+        }
+
         memcpy(message, &data[8], header->data_len);
     
         geneate_crc_16(data, 8*sizeof(uint8_t) + header->data_len, &header->crc_16);
@@ -452,19 +560,34 @@ esp_err_t DataLinkManager::get_data_from_frame(uint8_t* data, size_t data_len, u
     
     } else {
         //generic frame
+
+        if (data_len < 13){
+            return ESP_ERR_INVALID_SIZE;
+        }
+
         uint16_t total_frag = (uint16_t)data[6] | ((uint16_t)data[7] << 8);
         uint16_t frag_num = (uint16_t)data[8] | ((uint16_t)data[9] << 8);
         header->frag_info = (total_frag << 16) | (frag_num);
         header->data_len = (uint16_t)data[10] | ((uint16_t)data[11] << 8);
 
         *message_size = header->data_len;
-        memcpy(message, &data[12], header->data_len);
-    
-        geneate_crc_16(data, 12*sizeof(uint8_t) + header->data_len, &header->crc_16);
 
-        uint16_t crc_calc = ((uint16_t)data[12 + header->data_len] | ((uint16_t)data[13 + header->data_len] << 8));
+        if ((*message_size > MAX_GENERIC_DATA_LEN && total_frag != 1) || (14 + *message_size > data_len)){
+            ESP_LOGE(DEBUG_LINK_TAG, "Invalid payload length: %u", *message_size);
+            return ESP_ERR_INVALID_SIZE;
+        }
+
+        memcpy(message, &data[12], *message_size);
+        
+        if (total_frag != 1){
+            geneate_crc_16(data, 12*sizeof(uint8_t) + *message_size, &header->crc_16);
+        } else {
+            header->crc_16 = 0;
+        }
+
+        uint16_t crc_calc = ((uint16_t)data[12 + *message_size] | ((uint16_t)data[13 + *message_size] << 8));
     
-        if (crc_calc != header->crc_16){
+        if (crc_calc != header->crc_16 && total_frag != 1){
             //CRC mismatch
             ESP_LOGE(DEBUG_LINK_TAG, "CRC Mismatch - Generic Frame");
             ESP_LOGE(DEBUG_LINK_TAG, "Got 0x%04X but calculated 0x%04X\n", crc_calc, header->crc_16);
@@ -479,7 +602,7 @@ esp_err_t DataLinkManager::get_data_from_frame(uint8_t* data, size_t data_len, u
     // printf("0x%02X       %-12d %-13d %-15d  0x%02X       %-10d   0x%04X\n",
     // header->preamble, header->sender_id, header->receiver_id, header->seq_num, header->type_flag, header->data_len, header->crc_16);
 
-    printf("Message received: %.*s\n", header->data_len, message);
+    // printf("Message received: %.*s\n", *message_size, message);
 
     return ESP_OK;
 }
@@ -511,6 +634,19 @@ esp_err_t DataLinkManager::geneate_crc_16(uint8_t* data, size_t data_len, uint16
     return ESP_OK;
 }
 
+/**
+ * @brief Prints to console the encoded frame information from a byte array recevied from RMT
+ * 
+ * @note Should only be used for debug purposes
+ * 
+ * @warning This function may not be reliable/buggy
+ * 
+ * @param data 
+ * @param data_len 
+ * @param message 
+ * @param message_len 
+ * @return esp_err_t 
+ */
 esp_err_t DataLinkManager::print_frame_info(uint8_t* data, size_t data_len, uint8_t* message, size_t message_len){
     // printf("Received frame of size %d:\n", data_len);
 

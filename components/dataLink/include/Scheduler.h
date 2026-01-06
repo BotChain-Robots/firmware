@@ -3,22 +3,42 @@
 #include "esp_timer.h"
 #include <cstdint>
 
-//TODO: need to make a private send() to accept a Frame type. 
-//the public send() is fine to keep but needs to be modified to simply create the Frame type based on the flags, data size, and args, and then push to the priority queue based on routing
-//TODO: receive also needs to be updated, when receiving a frame not destined for that board; need to route that frame towards the actual destination (requires pushing that frame onto the priority queue)
-//TODO: generic frames receive needs to be created (handle fragmenting, resend on corruption). ethe resend on corruption will be a lot of work as it requires ACK frames to be send and currently there is 0 support for ACK since we don't save any recently sent frames (can't resend)
-
 #define SCHEDULER_MUTEX_WAIT 10 //max time duration to wait
-#define SCHEDULER_PERIOD_MS 25
+#define SCHEDULER_PERIOD_MS 140
+#define RECEIVE_TASK_PERIOD_MS 2
+
+#define GENERIC_FRAME_SLIDING_WINDOW_SIZE 5 //defines the maximum size of the sliding window before resending previously un-ack'd fragments
+#define SLIDING_WINDOW_MUTEX_TIMEOUT_MS 5
+#define GENERIC_FRAME_MOD_TIMEOUT 10 //be scheduled at most 9 + GENERIC_FRAME_MIN_TIMEOUT times before sending another fragment
+#define GENERIC_FRAME_MIN_TIMEOUT 10
+
+#define SEND_ACK_PERIOD_MS 50
+#define SEND_ACK_MUTEX_WAIT 10
 
 //Metadata representing the frame to be sent but is currently scheduled
 typedef struct _frame_scheduler_metadata {
     FrameHeader header; //header of the frame
-    uint16_t generic_frame_data_offset; //For data greater than MAX_CONTROL_DATA_LEN to keep track of fragment positions
+    uint16_t generic_frame_data_offset; //For data greater than MAX_GENERIC_DATA_LEN to keep track of fragment positions
     int64_t enqueue_time_ns; //when the frame has been first enqueued into the priority queue
     uint8_t* data; //dyanmically allocated memory - contains the actual data
     uint16_t len; // length of the actual data
+
+    //sliding window
+    uint16_t last_ack; //fragment number represnting the last ack'd fragment (from rx) - head
+    uint16_t curr_fragment; //fragment number of the current fragment being sent
+    uint32_t timeout;
 } SchedulerMetadata;
+
+typedef struct _frame_ack_record {
+    uint16_t last_ack; //last ack'd fragment recevied from the rx
+    uint16_t total_frags; //total number of fragments associated with the sequence number
+    uint16_t seq_num; //sequence number this ack corresponds to
+} FrameAckRecord;
+
+typedef struct _send_ack_metadata{
+    uint8_t data[GENERIC_FRAG_ACK_DATA_SIZE];
+    uint8_t sender_id;
+} SendAckMetaData;
 
 typedef struct _frame_compare {
     /**

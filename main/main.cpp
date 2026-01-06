@@ -1,3 +1,4 @@
+#if !defined(RMT_TEST) || (defined(RMT_TEST) && RMT_TEST == 0)
 // #include <cstdio>
 // #include <memory>
 
@@ -19,3 +20,4 @@ extern "C" [[noreturn]] void app_main(void) {
         "metadata_tx", 3096, loop_manager.get(), 3, nullptr);
     loop_manager->control_loop();
 }
+#endif

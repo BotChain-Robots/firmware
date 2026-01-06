@@ -4,43 +4,34 @@ file(GLOB_RECURSE ALL_SRCS
         "${CMAKE_CURRENT_SOURCE_DIR}/*.S"
 )
 
+if(DEFINED RMT_TEST AND RMT_TEST EQUAL 1) 
+    message(STATUS "Building for testing RMT/Link Layer Functionality with main_rmt_test.cpp")
+    list(REMOVE_ITEM ALL_SRCS
+        "${CMAKE_CURRENT_SOURCE_DIR}/main.cpp"
+    )
+    idf_build_set_property(COMPILE_DEFINITIONS RMT_TEST APPEND) 
+else()
+    list(REMOVE_ITEM ALL_SRCS
+    "${CMAKE_CURRENT_SOURCE_DIR}/main.cpp"
+    )
+endif()
+
 idf_component_register(SRCS ${ALL_SRCS}
                        PRIV_REQUIRES esp_psram spi_flash nvs_flash esp_event rpc constants config rmt esp_driver_gptimer dataLink flatbuffers esp_driver_ledc
                        INCLUDE_DIRS "include")
 
-if(DEFINED BOARD_NAME AND BOARD_NAME)
-    message(STATUS "Building for board name: " ${BOARD_NAME})
-    idf_build_set_property(COMPILE_DEFINITIONS BOARD_${BOARD_NAME} APPEND)
+if(DEFINED SRC_BOARD AND SRC_BOARD)
+    message(STATUS "Building for source board id: " ${SRC_BOARD})
+    idf_build_set_property(COMPILE_DEFINITIONS SRC_BOARD=${SRC_BOARD} APPEND)
 endif()
-if(DEFINED TIME_TEST AND TIME_TEST)
-    message(STATUS "Building with TIME_TEST: " ${TIME_TEST})
-    idf_build_set_property(COMPILE_DEFINITIONS TIME_TEST APPEND)
+
+if(DEFINED RECEIVER_BOARD AND RECEIVER_BOARD)
+    message(STATUS "Building for receiver board id: " ${RECEIVER_BOARD})
+    idf_build_set_property(COMPILE_DEFINITIONS RECEIVER_BOARD=${RECEIVER_BOARD} APPEND)
 endif()
-if(DEFINED MANCHESTER_40 AND MANCHESTER_40)
-    message(STATUS "Building with MANCHESTER_40: " ${MANCHESTER_40})
-    idf_build_set_property(COMPILE_DEFINITIONS MANCHESTER_40 APPEND)
+
+if(DEFINED RECEIVE_ONLY AND RECEIVE_ONLY)
+    message(STATUS "Building for receive only")
+    idf_build_set_property(COMPILE_DEFINITIONS RECEIVE_ONLY=${RECEIVE_ONLY} APPEND)
 endif()
-if(DEFINED NRZ_INVERTED AND NRZ_INVERTED)
-    message(STATUS "Building with NRZ_INVERTED: " ${NRZ_INVERTED})
-    idf_build_set_property(COMPILE_DEFINITIONS NRZ_INVERTED APPEND)
-endif()
-if(DEFINED NRZ_INVERTED_10 AND NRZ_INVERTED_10)
-    message(STATUS "Building with NRZ_INVERTED_10: " ${NRZ_INVERTED_10})
-    idf_build_set_property(COMPILE_DEFINITIONS NRZ_INVERTED_10 APPEND)
-endif()
-if(DEFINED NRZ_INVERTED_20 AND NRZ_INVERTED_20)
-    message(STATUS "Building with NRZ_INVERTED_20: " ${NRZ_INVERTED_20})
-    idf_build_set_property(COMPILE_DEFINITIONS NRZ_INVERTED_20 APPEND)
-endif()
-if(DEFINED NRZ_INVERTED_2 AND NRZ_INVERTED_2)
-    message(STATUS "Building with NRZ_INVERTED_2: " ${NRZ_INVERTED_2})
-    idf_build_set_property(COMPILE_DEFINITIONS NRZ_INVERTED_2 APPEND)
-endif()
-if(DEFINED NRZ_INVERTED_40_HZ AND NRZ_INVERTED_40_HZ)
-    message(STATUS "Building with NRZ_INVERTED_40_HZ: " ${NRZ_INVERTED_40_HZ})
-    idf_build_set_property(COMPILE_DEFINITIONS NRZ_INVERTED_40_HZ APPEND)
-endif()
-if(DEFINED VERIFY_RECEIVE AND VERIFY_RECEIVE)
-    message(STATUS "Building with VERIFY_RECEIVE: " ${VERIFY_RECEIVE})
-    idf_build_set_property(COMPILE_DEFINITIONS VERIFY_RECEIVE APPEND)
-endif()
+
