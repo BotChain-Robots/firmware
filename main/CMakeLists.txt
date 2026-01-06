@@ -4,15 +4,15 @@ file(GLOB_RECURSE ALL_SRCS
         "${CMAKE_CURRENT_SOURCE_DIR}/*.S"
 )
 
-if(DEFINED RMT_TEST AND RMT_TEST EQUAL 1) 
+if(DEFINED RMT_TEST AND RMT_TEST EQUAL 1)
     message(STATUS "Building for testing RMT/Link Layer Functionality with main_rmt_test.cpp")
     list(REMOVE_ITEM ALL_SRCS
         "${CMAKE_CURRENT_SOURCE_DIR}/main.cpp"
     )
-    idf_build_set_property(COMPILE_DEFINITIONS RMT_TEST APPEND) 
+    idf_build_set_property(COMPILE_DEFINITIONS RMT_TEST APPEND)
 else()
     list(REMOVE_ITEM ALL_SRCS
-    "${CMAKE_CURRENT_SOURCE_DIR}/main.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/main_rmt_test.cpp"
     )
 endif()
 
@@ -34,4 +34,3 @@ if(DEFINED RECEIVE_ONLY AND RECEIVE_ONLY)
     message(STATUS "Building for receive only")
     idf_build_set_property(COMPILE_DEFINITIONS RECEIVE_ONLY=${RECEIVE_ONLY} APPEND)
 endif()
-
