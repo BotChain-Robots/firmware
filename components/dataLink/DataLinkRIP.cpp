@@ -471,5 +471,5 @@ void DataLinkManager::start_rip_tasks(){
     ESP_LOGI(DEBUG_LINK_TAG, "Starting RIP Broadcast task");
     xTaskCreate(DataLinkManager::rip_broadcast_timer_function, "RIPBroadcast", 4096, static_cast<void*>(this), 5, &rip_broadcast_task);
     ESP_LOGI(DEBUG_LINK_TAG, "Starting RIP TTL task");
-    xTaskCreate(DataLinkManager::rip_ttl_decrement_task, "RIPTTL", 2048, static_cast<void*>(this), 5, &rip_ttl_task);
+    xTaskCreate(DataLinkManager::rip_ttl_decrement_task, "RIPTTL", 4096, static_cast<void*>(this), 5, &rip_ttl_task);
 } 
