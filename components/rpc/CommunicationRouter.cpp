@@ -34,13 +34,6 @@ CommunicationRouter::~CommunicationRouter() { vTaskDelete(m_router_thread); }
   const auto that = static_cast<CommunicationRouter *>(args);
 
   while (true) {
-        
-    if (std::chrono::system_clock::now() - that->m_last_leader_updated > std::chrono::seconds(15)) {
-        that->m_last_leader_updated = std::chrono::system_clock::now();
-        ESP_LOGI(TAG, "Updating leader");
-        that->update_leader();
-    }
-    
     for (uint8_t channel = 0;
          channel <
          MODULE_TO_NUM_CHANNELS_MAP[that->m_config_manager.get_module_type()];
@@ -57,7 +50,7 @@ CommunicationRouter::~CommunicationRouter() { vTaskDelete(m_router_thread); }
       data.resize(frame_size);
       that->m_data_link_manager->async_receive(data.data(), frame_size,
                                                &frame_header, channel);
-        that->route(data.data(), frame_size);
+      that->route(data.data(), frame_size);
     }
 
     vTaskDelay(pdMS_TO_TICKS(50));
@@ -95,7 +88,7 @@ void CommunicationRouter::update_leader() {
     } else if (this->m_leader == m_module_id) {
       m_pc_connection->disconnect();
       m_lossless_server->shutdown();
-      m_lossless_server->shutdown();
+      m_lossy_server->shutdown();
     }
   }
 
