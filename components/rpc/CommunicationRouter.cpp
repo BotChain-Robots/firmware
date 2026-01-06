@@ -34,6 +34,13 @@ CommunicationRouter::~CommunicationRouter() { vTaskDelete(m_router_thread); }
   const auto that = static_cast<CommunicationRouter *>(args);
 
   while (true) {
+    if (std::chrono::system_clock::now() - that->m_last_leader_updated >
+        std::chrono::seconds(15)) {
+      that->m_last_leader_updated = std::chrono::system_clock::now();
+      ESP_LOGI(TAG, "Updating leader");
+      that->update_leader();
+    }
+
     for (uint8_t channel = 0;
          channel <
          MODULE_TO_NUM_CHANNELS_MAP[that->m_config_manager.get_module_type()];
