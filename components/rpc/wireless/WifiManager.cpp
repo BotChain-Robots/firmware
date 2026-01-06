@@ -108,6 +108,8 @@ int WifiManager::init_connection() {
     esp_wifi_start();
     esp_wifi_connect();
 
+    esp_netif_set_default_netif(esp_netif_get_handle_from_ifkey("WIFI_STA_DEF"));
+
     return 0;
 }
 
@@ -199,6 +201,8 @@ int WifiManager::init_softap() {
 
     esp_wifi_start();
 
+   	esp_netif_set_default_netif(esp_netif_get_handle_from_ifkey("WIFI_STA_DEF"));
+
     return 0;
 }
 
@@ -214,12 +218,12 @@ void WifiManager::wifi_event_handler(void *event_handler_arg, esp_event_base_t e
     const auto that = static_cast<WifiManager *>(event_handler_arg);
 
     if (WIFI_EVENT_STA_START == event_id) {
-        ESP_LOGI(TAG, "Station mode started\n");
+        ESP_LOGI(TAG, "Station mode started");
     } else if (WIFI_EVENT_STA_CONNECTED == event_id) {
-        ESP_LOGI(TAG, "Connected to wifi in station mode\n");
+        ESP_LOGI(TAG, "Connected to wifi in station mode");
         that->update_state(wifi_state::connected);
     } else if (WIFI_EVENT_STA_DISCONNECTED == event_id) {
-        ESP_LOGI(TAG, "Station mode shutdown\n");
+        ESP_LOGI(TAG, "Station mode shutdown");
         xSemaphoreTake(that->m_mutex, portMAX_DELAY);
         if (that->m_state == wifi_state::connected) {
             xSemaphoreGive(that->m_mutex);
@@ -228,12 +232,12 @@ void WifiManager::wifi_event_handler(void *event_handler_arg, esp_event_base_t e
             xSemaphoreGive(that->m_mutex);
         }
     } else if (IP_EVENT_STA_GOT_IP == event_id) {
-        ESP_LOGI(TAG, "Got IP as station\n");
+        ESP_LOGI(TAG, "Got IP as station");
     } else if (WIFI_EVENT_AP_STACONNECTED == event_id) {
-        ESP_LOGI(TAG, "User connected to AP\n");
+        ESP_LOGI(TAG, "User connected to AP");
     } else if (WIFI_EVENT_AP_STADISCONNECTED == event_id) {
-        ESP_LOGI(TAG, "User disconnected from AP\n");
+        ESP_LOGI(TAG, "User disconnected from AP");
     } else if (WIFI_EVENT_AP_START == event_id) {
-        ESP_LOGI(TAG, "AP started\n");
+        ESP_LOGI(TAG, "AP started");
     }
 }

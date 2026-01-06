@@ -84,7 +84,7 @@ void TCPServer::shutdown() {
 
         constexpr int opt = 1;
         setsockopt(that->m_server_sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
-        ESP_LOGI(TAG, "Socket created\n");
+        ESP_LOGI(TAG, "Socket created");
 
         sockaddr_in server_addr = {
             .sin_family = AF_INET,
