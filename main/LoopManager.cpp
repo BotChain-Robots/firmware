@@ -14,6 +14,7 @@
 
 #define ACTUATOR_CMD_TAG 5
 #define TOPOLOGY_CMD_TAG 6
+#define METADATA_RX_TAG 7
 
 #define METADATA_PERIOD_MS 1000
 
@@ -51,7 +52,18 @@
             casted_orientations,
             that->m_messaging_interface->get_connection_type(),
             that->m_messaging_interface->get_leader());
-        that->m_messaging_interface->send(static_cast<char *>(data), size, PC_ADDR, TOPOLOGY_CMD_TAG, true);
+        that->m_messaging_interface->send(static_cast<char *>(data), size, PC_ADDR, TOPOLOGY_CMD_TAG, false);
         vTaskDelay(METADATA_PERIOD_MS / portTICK_PERIOD_MS);
+    }
+}
+
+[[noreturn]] void LoopManager::metadata_rx_loop(char *args) {
+    const auto that = reinterpret_cast<LoopManager *>(args);
+    const auto buffer = std::make_unique<std::vector<char>>();
+    buffer->resize(512);
+    while (true) {
+        that->m_messaging_interface->recv(buffer->data(), 512, PC_ADDR, METADATA_RX_TAG);
+
+
     }
 }

@@ -85,11 +85,11 @@ void CommunicationRouter::update_leader() {
         if (max == m_module_id) {
             m_pc_connection->connect();
             m_lossless_server->startup();
-            // todo: BTS-22 add lossy server
+            m_lossy_server->startup();
         } else if (this->m_leader == m_module_id) {
             m_pc_connection->disconnect();
             m_lossless_server->shutdown();
-            // todo: BTS-22 add lossy server
+            m_lossless_server->shutdown();
         }
     }
 
@@ -113,7 +113,11 @@ void CommunicationRouter::route(uint8_t* buffer, const size_t length) const {
         this->m_rx_callback(reinterpret_cast<char *>(buffer), 512);
     } else if (mpi_message->destination() == PC_ADDR && this->m_leader == m_module_id) {
         ESP_LOGD(TAG, "Routing to wifi [dest: %d, length: %d]", static_cast<int>(mpi_message->destination()), length);
-        this->m_lossless_server->send_msg(reinterpret_cast<char *>(buffer), 512);
+        if (mpi_message->is_durable()) {
+            this->m_lossless_server->send_msg(reinterpret_cast<char *>(buffer), 512);
+        } else {
+            this->m_lossy_server->send_msg(reinterpret_cast<char *>(buffer), 512);
+        }
     } else if (mpi_message->destination() == PC_ADDR) {
         ESP_LOGD(TAG, "Routing to wireline for wifi [dest: %d, length: %d]", static_cast<int>(mpi_message->destination()), length);
         this->m_data_link_manager->send(this->m_leader, buffer, length, FrameType::MOTOR_TYPE, 0);
