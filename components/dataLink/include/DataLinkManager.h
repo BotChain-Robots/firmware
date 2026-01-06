@@ -18,6 +18,9 @@
 
 #define CRC_POLYNOMIAL 0x1021
 
+static const char* NVS_BOARD_ID_KEY = "id";
+static const char* NVS_BOARD_NAMESPACE = "board";
+
 //look up table for crc
 static const uint16_t crc16_table[256] = {
     0x0000, 0x1021, 0x2042, 0x3063, 0x4084, 0x50A5, 0x60C6, 0x70E7, 0x8108, 0x9129, 0xA14A, 0xB16B, 0xC18C, 0xD1AD, 0xE1CE, 0xF1EF, 
@@ -39,6 +42,7 @@ static const uint16_t crc16_table[256] = {
 }; 
 
 #define ASYNC_QUEUE_WAIT_TICKS 100
+#define SEQUENCE_NUM_MAP_MUTEX_MAX_WAIT_MS 50
 
 /**
  * @brief Class to represent the Data Link Layer
@@ -56,11 +60,17 @@ class DataLinkManager{
         esp_err_t get_routing_table(RIPRow_public* table, size_t* table_size);
         esp_err_t async_receive_info(uint16_t* frame_size, FrameHeader* header, uint8_t channel);
         esp_err_t async_receive(uint8_t* data, uint16_t data_len, FrameHeader* header, uint8_t channel);
+        esp_err_t ready();
+        esp_err_t send_ack(uint8_t sender_id, uint8_t* data, uint16_t data_len);
     private:
         uint8_t this_board_id = 0;
         uint8_t num_channels = MAX_CHANNELS;
         std::unique_ptr<RMTManager> phys_comms;
+
         std::unordered_map<uint8_t, uint16_t> sequence_num_map;
+        SemaphoreHandle_t sequence_num_map_mutex;
+        esp_err_t get_inc_sequence_num(uint8_t board_id, uint16_t* seq_num);
+        esp_err_t get_sequence_num(uint8_t board_id, uint16_t* seq_num);
 
         volatile bool stop_tasks = false; //used by the tasks to know when to stop (set true when DataLinkManager is destroyed)
         TaskHandle_t rip_broadcast_task = NULL;
@@ -76,6 +86,7 @@ class DataLinkManager{
         esp_err_t create_generic_frame(uint8_t* data, uint16_t data_len, GenericFrame generic_frame, uint16_t offset, uint8_t* send_data, size_t* send_data_len);
         
         //==== RIP related functions ====
+
         void init_rip();
         esp_err_t rip_find_entry(uint8_t board_id, RIPRow** entry, bool reserve_row);
         esp_err_t rip_update_entry(uint8_t new_hop, uint8_t channel, RIPRow** entry);
@@ -108,58 +119,37 @@ class DataLinkManager{
         void init_scheduler();
         esp_err_t push_frame_to_scheduler(SchedulerMetadata frame, uint8_t channel);
         TaskHandle_t scheduler_task = NULL;
-        /**
-         * @brief Schedules which frame to send
-         * 
-         * Scheduler: 
-         * - All frames will be pushed to the back onto a queue
-         * - When a generic frame sends a chunk, it will be pushed back to the queue for the next chunk to be sent
-         * 
-         * Scheduling may change (above scheduler will lead to starvation of control frames depending on the number of generic frames/fragments to send)
-         */
+
         [[noreturn]] static void frame_scheduler(void* args);
-        /**
-         * @brief Scheduler sending the actual frame at the top of the heap on a channel 
-         * 
-         * @return esp_err_t 
-         */
+
         esp_err_t scheduler_send(uint8_t channel);
+
+        esp_err_t scheduler_send_rmt(uint8_t channel, SchedulerMetadata frame, uint8_t* send_data, size_t frame_size, bool wait_for_tx_done);
 
         //Generic Frame Receive Fragments
 
-        /**
-         * @brief Store a fragment that has been received 
-         * 
-         * @param fragment 
-         * @param channel
-         * @return esp_err_t 
-         */
         esp_err_t store_fragment(GenericFrame* fragment, uint8_t channel);
 
         /**
          * @brief Stores generic frame fragments
          * 
          * Mapping:
-         * Board ID -> Sequence number -> Array of Generic Frame Fragments, with size of the number of expected fragments
+         * Board ID (of the receiver) -> Sequence number -> Array of Generic Frame Fragments, with size of the number of expected fragments
          * 
          * TODO:
-         * - When receiving a fragment, insert it into the map
-         * - When all fragments have been received in a sequence, remove the entire entry (sequence) from the map, and push final data for async receive
          * - Sliding window + ACKs
          * 
          */
-        std::unordered_map<uint16_t, std::unordered_map<uint16_t, FragmentMetadata>> fragment_map;
+        std::unordered_map<uint16_t, std::unordered_map<uint16_t, FragmentMetadata>> fragment_map[MAX_CHANNELS];
 
         esp_err_t complete_fragment(uint16_t board_id, uint16_t sequence_num, uint8_t channel);
 
         SemaphoreHandle_t async_rx_queue_mutex[MAX_CHANNELS];
+        SemaphoreHandle_t rx_fragment_mutex[MAX_CHANNELS];
 
         //Async receive
         /**
          * @brief Queue to store complete received frame data
-         * 
-         * TODO:
-         *  - Replace the public `receive()` with the `async_receive()`. 
          * 
          */
         std::queue<Rx_Metadata> async_receive_queue[MAX_CHANNELS];
@@ -185,6 +175,33 @@ class DataLinkManager{
 
         TaskHandle_t receive_task = NULL;
 
+        /**
+         * @brief Generic Frame Sliding Window
+         * 
+         * Mapping:
+         * Board Id (of the receiver) -> Sequence Number -> FrameAckRecord
+         * 
+         */
+        std::unordered_map<uint16_t, std::unordered_map<uint16_t, FrameAckRecord>> sliding_window[MAX_CHANNELS];
+
+        SemaphoreHandle_t sliding_window_mutex[MAX_CHANNELS];
+
+        esp_err_t inc_head_sliding_window(uint8_t channel, uint8_t board_id, uint16_t seq_num, FrameAckRecord* ack_record);
+
+        esp_err_t get_record_sliding_window(uint8_t channel, uint8_t board_id, uint16_t seq_num, FrameAckRecord* ack_record);
+
+        esp_err_t complete_record_sliding_window(uint8_t channel, uint8_t board_id, uint16_t seq_num);
+
+        /**
+         * @brief Thread for sending acks - Send ACKs on a separate thread to not hold up the receive thread (missing other frames)
+         * 
+         * @param args 
+         */
+        [[noreturn]] static void send_ack_thread_main(void* args);
+        TaskHandle_t send_ack_task = NULL;
+
+        SemaphoreHandle_t send_ack_queue_mutex[MAX_CHANNELS];
+        std::queue<SendAckMetaData> send_ack_queue[MAX_CHANNELS];
 };
 
 #endif //DATA_LINK

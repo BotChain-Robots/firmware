@@ -10,9 +10,9 @@
 
 #define START_OF_FRAME 0xAB //0b1010_1011 - denotes the start of frame
 
-#define MAX_CONTROL_DATA_LEN (1 << 8) // Max 256B
+#define MAX_FRAME_SIZE 121 //Max 121B (due to rmt) - note this includes the overhead of the frame. the actual payload max depends on the frame type (eg. 121 - 9 B is the max control data length)
 
-#define MAX_GENERIC_NUM_FRAG (1 << 16) // Max 2**16 Fragments can be made with a generic frame (total 2**16 *MAX_CONTROL_DATA_LEN B of data can be sent ~ 16 MiB)
+#define MAX_GENERIC_NUM_FRAG (1 << 16) // Max 2**16 Fragments can be made with a generic frame (total 2**16 *MAX_GENERIC_DATA_LEN B of data can be sent ~ 6.7 MiB)
 
 #define MAX_FRAME_QUEUE_SIZE 15 //Size of the queue for the frame scheduler (per channel)
 
@@ -30,17 +30,33 @@
 #define CONTROL_FRAME_OVERHEAD 9
 #define GENERIC_FRAME_OVERHEAD 14
 
+#define MAX_GENERIC_DATA_LEN (MAX_FRAME_SIZE - GENERIC_FRAME_OVERHEAD)
+#define MAX_CONTROL_DATA_LEN (MAX_FRAME_SIZE - CONTROL_FRAME_OVERHEAD)
+
+//Generic Frame Fragment ACK
+#define GENERIC_FRAG_ACK_DATA_SIZE 7
+#define GENERIC_FRAG_ACK_PREAMBLE 0x69
+
 #define CONTROL_FRAME_TYPE 0x80 //if the frame type MSB is set to 1, use the control frame
 //Types (total 2^4 = 16 different types)
 enum class FrameType : uint8_t {
+    //Control Frames
     MOTOR_TYPE = 0x80, //0b1000_0000
-    SERVO_TYPE = 0xC0, //0b1100_0000
-    DISTANCE_SENSOR_TYPE = 0xE0, //0b1110_0000
-    DEBUG_CONTROL_TYPE = 0xC0, //0b1100_0000
-    DEBUG_GENERIC_TYPE = 0x00, //0b0000_0000
-    SYSTEM_TYPE = 0x30, //0x0011_0000 - used for statuses, discovery, and other maintainence requests
     RIP_TABLE_CONTROL = 0x90, //0b1001_0000 - using the control frame to broadcast the RIP table
-    RIP_TABLE_GENERIC = 0x10 //0b0001_000 - using the generic frame to broadcast the RIP table
+    DISTANCE_SENSOR_TYPE = 0xA0, //0b1010_0000
+    SERVO_TYPE = 0xC0, //0b1100_0000
+    MISC_CONTROL_TYPE = 0xD0, //0b1101_0000
+    
+    //Generic Frames
+    MISC_GENERIC_TYPE = 0x00, //0b0000_0000
+    MISC_UDP_GENERIC_TYPE = 0x10, // 0b0001_0000 - Same as MISC_GENERIC_TYPE except no ACK frames will be expected
+    SYSTEM_TYPE = 0x30, //0b0011_0000 - used for statuses, discovery, and other maintainence requests
+    ACK_TYPE = 0x60, //0b0110_0000 - ACK frames for Generic Fragments
+    RIP_TABLE_GENERIC = 0x70 //0b0111_0000 - using the generic frame to broadcast the RIP table (not used rn)
+};
+
+enum class FrameFlags : uint8_t {
+    ANY_FLAG = 0x0,
 };
 
 #pragma pack(push, 1) //these structs will be transmitted as is (ensure the structs are structured using 1B alignment - no padding)
@@ -51,7 +67,7 @@ typedef struct _control_frame{
     uint16_t seq_num; //sequence number to differentiate frames being sent from sender to receiver
     uint8_t type_flag; //(type << 4) | flag - both are 4 bits
     uint16_t data_len; //Data Length (max 256B)
-    uint8_t data[MAX_CONTROL_DATA_LEN]; //Variable Length of Data
+    uint8_t data[MAX_FRAME_SIZE]; //Variable Length of Data
     uint16_t crc_16; //CRC-16
 } ControlFrame; //this will have a max size of 9 + 256B = 265B
 
@@ -64,7 +80,7 @@ typedef struct _data_link_frame{
     uint16_t total_frag; //total number of fragments for this sequence
     uint16_t frag_num; //current fragment number
     uint16_t data_len; //Data Length (max 178B)
-    uint8_t data[MAX_CONTROL_DATA_LEN]; //Variable Length of Data
+    uint8_t data[MAX_FRAME_SIZE]; //Variable Length of Data
     uint16_t crc_16; //CRC-16
 } GenericFrame; //this will have a max size of 14 + 2^8 B = 270 B
 #pragma pack(pop)

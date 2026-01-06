@@ -5,3 +5,5 @@ sdkconfig.old
 .vscode/*
 /.cache
 test/build/*
+build_A
+build_B

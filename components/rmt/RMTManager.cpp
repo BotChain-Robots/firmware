@@ -384,7 +384,7 @@ esp_err_t RMTManager::send(uint8_t* data, size_t size, rmt_transmit_config_t* co
     }
     if (data == nullptr || size == 0 || size > (RMT_SYMBOL_BLOCK_SIZE*4)) {
         // printf("send() error: data pointer NULL or size 0\n");
-        ESP_LOGE(DEBUG_TAG, "send() error: data pointer NULL or size 0");
+        ESP_LOGE(DEBUG_TAG, "send() error: data pointer NULL or size 0. size: %d", size);
         return ESP_FAIL;
     }
     if (config == nullptr) {

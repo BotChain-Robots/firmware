@@ -11,7 +11,7 @@
 // #define RIP_BROADCAST_INTERVAL 3000 //temp broadcast every 3 seconds (3000ms)
 #define RIP_TTL_START 180 //seconds
 #define RIP_MS_TO_SEC 1000 //1000 ms to 1 sec
-#define RIP_MAX_SEM_WAIT 30
+#define RIP_MAX_SEM_WAIT_MS 30
 #define RIP_FLUSH_COUNT 8 //flush after 8*30 seconds = 240 seconds
 
 #define RIP_DISCOVERY_MESSAGE_SIZE 1
