@@ -135,7 +135,6 @@ void UDPServer::shutdown() {
       auto buffer = std::make_unique<std::vector<uint8_t>>();
       buffer->resize(MAX_RX_BUFFER_SIZE + 4);
 
-      ESP_LOGI(TAG, "Before rx");
       if (int len = recvfrom(that->m_rx_server_sock, buffer->data(),
                              MAX_RX_BUFFER_SIZE, 0, nullptr, nullptr);
           len < 0) {

@@ -28,7 +28,7 @@ public:
 
   [[noreturn]] void manage();
 
-  enum class wifi_state { connect, connecting, connected, disconnect, disconnected, broadcast, broadcasting };
+  enum class wifi_state { connect, connecting, connected, disconnect, disconnected, broadcast, broadcasting, shutdown, disabled };
 
 private:
   void update_state(wifi_state state);
