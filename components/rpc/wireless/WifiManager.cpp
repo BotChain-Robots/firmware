@@ -21,7 +21,7 @@ int WifiManager::connect() {
 }
 
 int WifiManager::disconnect() {
-    this->update_state(wifi_state::disconnect);
+    this->update_state(wifi_state::shutdown);
     vTaskResume(this->m_task);
     return 0;
 }
@@ -55,7 +55,7 @@ int WifiManager::disconnect() {
                 handle_broadcasting();                                      // scans for known networks
                 break;
             case wifi_state::disconnect:
-                ESP_LOGI(TAG, "Shutting down wifi");
+                ESP_LOGI(TAG, "Shutting down wifi (will restart)");
                 handle_disconnect();
                 update_state(wifi_state::disconnected);
                 break;
@@ -63,6 +63,10 @@ int WifiManager::disconnect() {
                 ESP_LOGI(TAG, "Disconnected from wifi, starting back up");
                 update_state(wifi_state::connect);
                 break;
+            case wifi_state::shutdown:
+                ESP_LOGI(TAG, "Shutting down wifi (will not automatically restart)");
+                handle_disconnect();
+                update_state(wifi_state::disabled);
             default:
                 vTaskSuspend(nullptr);
                 break;
