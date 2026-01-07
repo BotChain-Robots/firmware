@@ -98,45 +98,39 @@ CreateAngle(::flatbuffers::FlatBufferBuilder &_fbb, int16_t value = 0) {
 struct SensorMessage FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   typedef SensorMessageBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
-    VT_VALUE_TYPE = 4,
-    VT_VALUE = 6
+    VT_VALUES_TYPE = 4,
+    VT_VALUES = 6
   };
-  Messaging::SensorValue value_type() const {
-    return static_cast<Messaging::SensorValue>(
-        GetField<uint8_t>(VT_VALUE_TYPE, 0));
+  const ::flatbuffers::Vector<uint8_t> *values_type() const {
+    return GetPointer<const ::flatbuffers::Vector<uint8_t> *>(VT_VALUES_TYPE);
   }
-  const void *value() const { return GetPointer<const void *>(VT_VALUE); }
-  template <typename T> const T *value_as() const;
-  const Messaging::Angle *value_as_Angle() const {
-    return value_type() == Messaging::SensorValue_Angle
-               ? static_cast<const Messaging::Angle *>(value())
-               : nullptr;
+  const ::flatbuffers::Vector<::flatbuffers::Offset<void>> *values() const {
+    return GetPointer<
+        const ::flatbuffers::Vector<::flatbuffers::Offset<void>> *>(VT_VALUES);
   }
   bool Verify(::flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
-           VerifyField<uint8_t>(verifier, VT_VALUE_TYPE, 1) &&
-           VerifyOffset(verifier, VT_VALUE) &&
-           VerifySensorValue(verifier, value(), value_type()) &&
+           VerifyOffset(verifier, VT_VALUES_TYPE) &&
+           verifier.VerifyVector(values_type()) &&
+           VerifyOffset(verifier, VT_VALUES) &&
+           verifier.VerifyVector(values()) &&
+           VerifySensorValueVector(verifier, values(), values_type()) &&
            verifier.EndTable();
   }
 };
-
-template <>
-inline const Messaging::Angle *
-SensorMessage::value_as<Messaging::Angle>() const {
-  return value_as_Angle();
-}
 
 struct SensorMessageBuilder {
   typedef SensorMessage Table;
   ::flatbuffers::FlatBufferBuilder &fbb_;
   ::flatbuffers::uoffset_t start_;
-  void add_value_type(Messaging::SensorValue value_type) {
-    fbb_.AddElement<uint8_t>(SensorMessage::VT_VALUE_TYPE,
-                             static_cast<uint8_t>(value_type), 0);
+  void add_values_type(
+      ::flatbuffers::Offset<::flatbuffers::Vector<uint8_t>> values_type) {
+    fbb_.AddOffset(SensorMessage::VT_VALUES_TYPE, values_type);
   }
-  void add_value(::flatbuffers::Offset<void> value) {
-    fbb_.AddOffset(SensorMessage::VT_VALUE, value);
+  void add_values(
+      ::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<void>>>
+          values) {
+    fbb_.AddOffset(SensorMessage::VT_VALUES, values);
   }
   explicit SensorMessageBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
       : fbb_(_fbb) {
@@ -151,12 +145,24 @@ struct SensorMessageBuilder {
 
 inline ::flatbuffers::Offset<SensorMessage> CreateSensorMessage(
     ::flatbuffers::FlatBufferBuilder &_fbb,
-    Messaging::SensorValue value_type = Messaging::SensorValue_NONE,
-    ::flatbuffers::Offset<void> value = 0) {
+    ::flatbuffers::Offset<::flatbuffers::Vector<uint8_t>> values_type = 0,
+    ::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<void>>>
+        values = 0) {
   SensorMessageBuilder builder_(_fbb);
-  builder_.add_value(value);
-  builder_.add_value_type(value_type);
+  builder_.add_values(values);
+  builder_.add_values_type(values_type);
   return builder_.Finish();
+}
+
+inline ::flatbuffers::Offset<SensorMessage> CreateSensorMessageDirect(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    const std::vector<uint8_t> *values_type = nullptr,
+    const std::vector<::flatbuffers::Offset<void>> *values = nullptr) {
+  auto values_type__ =
+      values_type ? _fbb.CreateVector<uint8_t>(*values_type) : 0;
+  auto values__ =
+      values ? _fbb.CreateVector<::flatbuffers::Offset<void>>(*values) : 0;
+  return Messaging::CreateSensorMessage(_fbb, values_type__, values__);
 }
 
 inline bool VerifySensorValue(::flatbuffers::Verifier &verifier,
