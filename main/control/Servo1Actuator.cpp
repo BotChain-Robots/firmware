@@ -6,7 +6,9 @@
 #include "AngleControlMessageBuilder.h"
 #include "constants/module.h"
 #include "driver/ledc.h"
+#include "flatbuffers_generated/SensorMessage_generated.h"
 #include "util/number_utils.h"
+#include "SensorMessageBuilder.h"
 
 #define LOW_DUTY 200
 #define HIGH_DUTY 1000
@@ -41,8 +43,13 @@ void Servo1Actuator::actuate(uint8_t *cmd) {
   const auto newDuty = util::mapRange<int32_t>(angleControlCmd->angle(), 0, 180,
                                                LOW_DUTY, HIGH_DUTY);
 
+  m_target = angleControlCmd->angle();
   std::cout << "actuating to " << angleControlCmd->angle() << std::endl;
 
   ESP_ERROR_CHECK(ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, newDuty));
   ESP_ERROR_CHECK(ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0));
+}
+
+std::vector<Flatbuffers::SensorValueInstance> Servo1Actuator::get_sensor_data() {
+    return {{m_target}};
 }

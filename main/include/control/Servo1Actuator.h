@@ -15,6 +15,9 @@ class Servo1Actuator final : public IActuator {
 public:
     Servo1Actuator();
     void actuate(std::uint8_t *cmd) override;
+    std::vector<Flatbuffers::SensorValueInstance> get_sensor_data() override;
+private:
+    uint16_t m_target = 90;
 };
 
 #endif //SERVO1ACTUATOR_H

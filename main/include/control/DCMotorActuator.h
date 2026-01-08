@@ -12,10 +12,12 @@ public:
     DCMotorActuator();
     ~DCMotorActuator() override;
     void actuate(uint8_t *cmd) override;
+    std::vector<Flatbuffers::SensorValueInstance> get_sensor_data() override;
 private:
     void setup_encoder();
     static void pid_task(char* args);
 
+    double m_current_angle;
     int64_t m_target_angle;
     TaskHandle_t m_pid_task;
 

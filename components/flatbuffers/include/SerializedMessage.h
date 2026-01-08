@@ -5,10 +5,12 @@
 #ifndef SERIALIZEDMESSAGE_H
 #define SERIALIZEDMESSAGE_H
 
+#include <cstdint>
+
 namespace Flatbuffers {
     struct SerializedMessage {
         void* data;
-        size_t size;
+        std::size_t size;
     };
 }
 

@@ -21,11 +21,11 @@ void DataLinkManager::init_scheduler(){
 
 /**
  * @brief Schedules which frame to send
- * 
- * Scheduler: 
+ *
+ * Scheduler:
  * - All frames will be pushed to the back onto a queue
  * - When a generic frame sends a chunk, it will be pushed back to the queue for the next chunk to be sent
- * 
+ *
  * Scheduling may change (above scheduler will lead to starvation of control frames depending on the number of generic frames/fragments to send)
  */
 [[noreturn]] void DataLinkManager::frame_scheduler(void* args){
@@ -41,17 +41,17 @@ void DataLinkManager::init_scheduler(){
             link_layer_obj->scheduler_send(i);
         }
         vTaskDelay(pdMS_TO_TICKS(SCHEDULER_PERIOD_MS));
-        
+
     }
     vTaskDelete(nullptr);
 }
 
 /**
  * @brief Pushes a frame to the scheduler
- * 
- * @param frame 
- * @param channel 
- * @return esp_err_t 
+ *
+ * @param frame
+ * @param channel
+ * @return esp_err_t
  */
 esp_err_t DataLinkManager::push_frame_to_scheduler(SchedulerMetadata frame, uint8_t channel){
     if (frame.data == nullptr){
@@ -77,7 +77,7 @@ esp_err_t DataLinkManager::push_frame_to_scheduler(SchedulerMetadata frame, uint
         ESP_LOGE(DEBUG_LINK_TAG, "Invalid scheduler queue handle");
         return ESP_FAIL;
     }
-    
+
     if (xSemaphoreTake(sq_handle[channel], pdMS_TO_TICKS(SCHEDULER_MUTEX_WAIT)) == pdTRUE){
         frame_queue[channel].push(frame);
         xSemaphoreGive(sq_handle[channel]);
@@ -93,9 +93,9 @@ esp_err_t DataLinkManager::push_frame_to_scheduler(SchedulerMetadata frame, uint
 }
 
 /**
- * @brief Scheduler sending the actual frame at the top of the heap on a channel 
- * 
- * @return esp_err_t 
+ * @brief Scheduler sending the actual frame at the top of the heap on a channel
+ *
+ * @return esp_err_t
  */
 esp_err_t DataLinkManager::scheduler_send(uint8_t channel){
     if (phys_comms == nullptr){
@@ -106,9 +106,9 @@ esp_err_t DataLinkManager::scheduler_send(uint8_t channel){
     if (sq_handle[channel] == nullptr){
         return ESP_FAIL;
     }
-    
+
     SchedulerMetadata frame;
-    
+
     if (xSemaphoreTake(sq_handle[channel], pdMS_TO_TICKS(SCHEDULER_MUTEX_WAIT)) == pdTRUE){
         if (frame_queue[channel].empty()){
             xSemaphoreGive(sq_handle[channel]);
@@ -144,7 +144,7 @@ esp_err_t DataLinkManager::scheduler_send(uint8_t channel){
     if (isControlFrame){
         //control frame
 
-        res = create_control_frame(frame.data, frame.len, 
+        res = create_control_frame(frame.data, frame.len,
             make_control_frame_from_header(frame.header), send_data, &frame_size);
 
         vPortFree(frame.data);
@@ -160,7 +160,7 @@ esp_err_t DataLinkManager::scheduler_send(uint8_t channel){
         //generic frame
         if (frame.len > (MAX_GENERIC_DATA_LEN)){
             //fragment here
-            
+
             if (frame.timeout == 0){
                 frame.timeout = GENERIC_FRAME_MIN_TIMEOUT;
             } else {
@@ -169,7 +169,7 @@ esp_err_t DataLinkManager::scheduler_send(uint8_t channel){
                 if (res != ESP_OK){
                     ESP_LOGE(DEBUG_LINK_TAG, "Failed to schedule next generic frame fragment");
                     vPortFree(frame.data);
-                    return res; 
+                    return res;
                 }
                 return ESP_OK;
             }
@@ -235,16 +235,16 @@ esp_err_t DataLinkManager::scheduler_send(uint8_t channel){
 
             // ESP_LOGI(DEBUG_LINK_TAG, "frame %d curr offset %d\n", frame.header.seq_num, curr_offset);
             // ESP_LOGI(DEBUG_LINK_TAG, "frame %d fragment size %d\n", frame.header.seq_num, fragment_size);
-            
+
             frame.header.frag_info = (frame.header.frag_info & 0xFFFF0000) | frame.curr_fragment; //increment frag_num
             //create fragment
-            res = create_generic_frame(frame.data, fragment_size, 
+            res = create_generic_frame(frame.data, fragment_size,
                 make_generic_frame_from_header(frame.header), curr_offset, send_data, &frame_size);
 
             if (res != ESP_OK){
                 ESP_LOGE(DEBUG_LINK_TAG, "Failed to create generic frame fragment");
                 vPortFree(frame.data);
-                return res; 
+                return res;
             }
 
             res = scheduler_send_rmt(channel, frame, send_data, frame_size, true);
@@ -255,12 +255,12 @@ esp_err_t DataLinkManager::scheduler_send(uint8_t channel){
                 if (res != ESP_OK){
                     ESP_LOGE(DEBUG_LINK_TAG, "Failed to schedule next generic frame fragment");
                     vPortFree(frame.data);
-                }  
-                return res; 
+                }
+                return res;
             }
 
             //need to schedule the next fragment (if total_frags != frag_num)
-            if ((frame.header.frag_info >> 16) > (frame.header.frag_info & 0xFF) || (frame.last_ack != (frame.header.frag_info >> 16) && 
+            if ((frame.header.frag_info >> 16) > (frame.header.frag_info & 0xFF) || (frame.last_ack != (frame.header.frag_info >> 16) &&
             static_cast<FrameType>(GET_TYPE(frame.header.type_flag)) != FrameType::MISC_UDP_GENERIC_TYPE)){
                 // frame.generic_frame_data_offset += fragment_size;
                 // ESP_LOGI(DEBUG_LINK_TAG, "scheduling frame %d with frag_info 0x%X", frame.header.seq_num, frame.header.frag_info);
@@ -268,20 +268,20 @@ esp_err_t DataLinkManager::scheduler_send(uint8_t channel){
                 if (res != ESP_OK){
                     ESP_LOGE(DEBUG_LINK_TAG, "Failed to schedule next generic frame fragment");
                     vPortFree(frame.data);
-                    return res; 
-                }                
+                    return res;
+                }
             } else {
                 //Done fragmenting, can free data array
-                ESP_LOGI(DEBUG_LINK_TAG, "finished fragmenting seq num %d frag_info 0x%X", frame.header.seq_num, frame.header.frag_info);
+                // ESP_LOGI(DEBUG_LINK_TAG, "finished fragmenting seq num %d frag_info 0x%X", frame.header.seq_num, frame.header.frag_info);
                 vPortFree(frame.data);
             }
 
         } else {
             //no fragmenting
-            res = create_generic_frame(frame.data, frame.len, 
+            res = create_generic_frame(frame.data, frame.len,
                 make_generic_frame_from_header(frame.header), 0, send_data, &frame_size);
             vPortFree(frame.data);
-            
+
             if (res != ESP_OK){
                 ESP_LOGE(DEBUG_LINK_TAG, "Failed to create generic frame");
                 return res;
@@ -331,22 +331,22 @@ esp_err_t DataLinkManager::scheduler_send_rmt(uint8_t channel, SchedulerMetadata
 
 /**
  * @brief Increases the head of the sliding window associated with the board id and sequence number
- * 
- * @param channel 
+ *
+ * @param channel
  * @param board_id Receiving Board ID (the board who ACK'd)
- * @param seq_num 
- * @param ack_record 
- * @return esp_err_t 
+ * @param seq_num
+ * @param ack_record
+ * @return esp_err_t
  */
 esp_err_t DataLinkManager::inc_head_sliding_window(uint8_t channel, uint8_t board_id, uint16_t seq_num, FrameAckRecord* ack_record){
     if (ack_record == NULL){
         return ESP_ERR_INVALID_ARG;
     }
 
-    if (ack_record->total_frags == 0 || ack_record->total_frags > MAX_GENERIC_NUM_FRAG 
+    if (ack_record->total_frags == 0 || ack_record->total_frags > MAX_GENERIC_NUM_FRAG
         || ack_record->last_ack == 0 || ack_record->total_frags < ack_record->last_ack){
         return ESP_ERR_INVALID_ARG;
-    }   
+    }
 
     if (sliding_window_mutex[channel] == NULL){
         return ESP_ERR_INVALID_STATE;
@@ -362,7 +362,7 @@ esp_err_t DataLinkManager::inc_head_sliding_window(uint8_t channel, uint8_t boar
         xSemaphoreGive(sliding_window_mutex[channel]);
         return ESP_ERR_INVALID_ARG;
     }
-    
+
     record.last_ack = ack_record->last_ack;
     if (record.total_frags == 0){
         record.total_frags = ack_record->total_frags;
@@ -375,12 +375,12 @@ esp_err_t DataLinkManager::inc_head_sliding_window(uint8_t channel, uint8_t boar
 
 /**
  * @brief Gets the current record associated with the board id and sequence number from the sliding window
- * 
- * @param channel 
+ *
+ * @param channel
  * @param board_id Receiving Board ID (the board who ACK'd)
- * @param seq_num 
- * @param ack_record 
- * @return esp_err_t 
+ * @param seq_num
+ * @param ack_record
+ * @return esp_err_t
  */
 esp_err_t DataLinkManager::get_record_sliding_window(uint8_t channel, uint8_t board_id, uint16_t seq_num, FrameAckRecord* ack_record){
     if (ack_record == NULL){
@@ -415,11 +415,11 @@ esp_err_t DataLinkManager::get_record_sliding_window(uint8_t channel, uint8_t bo
 
 /**
  * @brief Removes the board id + sequence number record fromt the sliding window (map)
- * 
- * @param channel 
+ *
+ * @param channel
  * @param board_id Receiving Board ID (the board who ACK'd)
- * @param seq_num 
- * @return esp_err_t 
+ * @param seq_num
+ * @return esp_err_t
  */
 esp_err_t DataLinkManager::complete_record_sliding_window(uint8_t channel, uint8_t board_id, uint16_t seq_num){
     if (sliding_window_mutex[channel] == NULL){
