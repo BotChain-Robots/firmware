@@ -2,35 +2,37 @@
 // Created by Johnathon Slightham on 2025-07-05.
 //
 
-
-#include <iostream>
 #include <memory>
 
 #include "LoopManager.h"
-#include "MessagingInterface.h"
+#include "SensorMessageBuilder.h"
 #include "TopologyMessageBuilder.h"
-#include "control/ActuatorFactory.h"
-#include "esp_log.h"
 
 #define ACTUATOR_CMD_TAG 5
 #define TOPOLOGY_CMD_TAG 6
 #define METADATA_RX_TAG 7
+#define SENSOR_TAG 8
 
 #define METADATA_PERIOD_MS 1000
+#define SENSOR_DATA_PERIOD_MS 1000
 
 [[noreturn]] void LoopManager::control_loop() const {
-    const auto actuator = ActuatorFactory::create_actuator(m_config_manager.get_module_type()); // todo: this needs to be moved higher up with one factory that returns shared ptr for both actuator and sensor.
-
     uint8_t buffer[512];
     while (true) {
         m_messaging_interface->recv(reinterpret_cast<char *>(buffer), 512, PC_ADDR, ACTUATOR_CMD_TAG);
-        actuator->actuate(buffer);
+        m_actuator->actuate(buffer);
+        send_sensor_reading(false);
     }
 }
 
 
-[[noreturn]] void LoopManager::sensor_loop() const {
-    // todo: impl
+[[noreturn]] void LoopManager::sensor_loop(char * args) {
+    const auto that = reinterpret_cast<LoopManager *>(args);
+
+    while (true) {
+        that->send_sensor_reading(true);
+        vTaskDelay(SENSOR_DATA_PERIOD_MS / portTICK_PERIOD_MS);
+    }
 }
 
 [[noreturn]] void LoopManager::metadata_tx_loop(char * args) {
@@ -63,7 +65,13 @@
     buffer->resize(512);
     while (true) {
         that->m_messaging_interface->recv(buffer->data(), 512, PC_ADDR, METADATA_RX_TAG);
-
-
     }
+}
+
+void LoopManager::send_sensor_reading(bool durable) const {
+    Flatbuffers::SensorMessageBuilder smb{};
+    // todo: get data from sensor
+    auto data = m_actuator->get_sensor_data();
+    const auto [ptr, size] = smb.build_sensor_message(data);
+    m_messaging_interface->send(reinterpret_cast<char *>(ptr), size, PC_ADDR, SENSOR_TAG, durable);
 }

@@ -1,3 +1,5 @@
+#include <cmath>
+
 #include "control/DCMotorActuator.h"
 #include "esp_attr.h"
 #include "util/number_utils.h"
@@ -104,9 +106,9 @@ void DCMotorActuator::pid_task(char* args) {
     const auto that = reinterpret_cast<DCMotorActuator*>(args);
 
     while (true) {
-        const double degrees = (encoder_ticks * 360.0) / (GEAR_RATIO * TICKS_PER_ROTATION);
+        that->m_current_angle = (encoder_ticks * 360.0) / (GEAR_RATIO * TICKS_PER_ROTATION);
 
-        const double error = degrees - that->m_target_angle;
+        const double error = that->m_current_angle - that->m_target_angle;
         that->m_integral += error * KI;
         const double detivative = (error - that->m_last_error) * KD;
         that->m_last_error = error;
@@ -145,4 +147,9 @@ void DCMotorActuator::pid_task(char* args) {
 
         vTaskDelay(75 / portTICK_PERIOD_MS);
     }
+}
+
+std::vector<Flatbuffers::SensorValueInstance> DCMotorActuator::get_sensor_data() {
+    // todo: this really needs to return a int32, should also return two sensor data items, one for target one for current
+    return {{(uint16_t)(m_current_angle)}};
 }

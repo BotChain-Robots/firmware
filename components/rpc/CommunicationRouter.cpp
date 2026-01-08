@@ -35,9 +35,8 @@ CommunicationRouter::~CommunicationRouter() { vTaskDelete(m_router_thread); }
 
   while (true) {
     if (std::chrono::system_clock::now() - that->m_last_leader_updated >
-        std::chrono::seconds(15)) {
+        std::chrono::seconds(2)) {
       that->m_last_leader_updated = std::chrono::system_clock::now();
-      ESP_LOGI(TAG, "Updating leader");
       that->update_leader();
     }
 
@@ -88,6 +87,7 @@ void CommunicationRouter::update_leader() {
 
   // Leader has changed, we may need to change PC connection state
   if (this->m_leader != max) {
+    ESP_LOGI(TAG, "Leader has changed from %d to %d", this->m_leader, max);
     if (max == m_module_id) {
       m_pc_connection->connect();
       m_lossless_server->startup();
