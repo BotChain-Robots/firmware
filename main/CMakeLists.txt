@@ -17,7 +17,7 @@ else()
 endif()
 
 idf_component_register(SRCS ${ALL_SRCS}
-                       PRIV_REQUIRES esp_psram spi_flash nvs_flash esp_event rpc constants config rmt esp_driver_gptimer dataLink flatbuffers esp_driver_ledc
+                       PRIV_REQUIRES esp_psram spi_flash nvs_flash esp_event rpc constants config rmt esp_driver_gptimer dataLink flatbuffers esp_driver_ledc movements
                        INCLUDE_DIRS "include")
 
 if(DEFINED SRC_BOARD AND SRC_BOARD)
