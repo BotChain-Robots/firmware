@@ -1,22 +1,12 @@
 # Firmware
 
-1. [Setup](#Setup)
-    1. [Install Dependencies](#InstallDependencies)
-        1. [MacOS](#MacOS1)
-        2. [Windows](#Windows1)
-2. [Development](#Development)
-    1. [Command Line Tools](#CommandLineTools)
-        1. [MacOS](#MacOS2)
-        2. [Windows](#Windows2)
-    2. [Using an IDE](#UsinganIDE)
-        1. [Visual Studio Code](#VisualStudioCode)
-        2. [JetBrains CLion](#JetBrainsCLion)
+[[_TOC_]]
 
 <hr>
 
 ## Setup <a name="Setup"></a>
-**This project is currently setup to work with the ESP32-S3 board.** 
-We use ESP-IDF version 5.5.1. 
+**This project is currently setup to work with the ESP32-S3 board.**
+We use ESP-IDF version 5.5.1.
 The Espressif docs have a [well written article](https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-guides/build-system.html) that explains the build system.
 Versions before 5.5 are incompatible due to an issue with the CMakeLists.txt file in the ledc component (that we depend on).
 
@@ -38,13 +28,18 @@ mkdir -p ~/esp
 cd ~/esp
 git clone --recursive https://github.com/espressif/esp-idf.git
 cd ~/esp/isp-idf
+git switch release/v5.5
+git submodule update --init --recursive
 ./install.sh esp32,esp32s3
+sudo chmod -R 777 ~/esp
 ```
 
+If your install is broken, you can delete the espressif folder `rm -rf ~/.espressif` and re-run the `./install` script.
+
 #### Windows <a name="Windows1"></a>
-Install ESP-IDF with with the GUI [Windows installer](https://dl.espressif.com/dl/esp-idf/?idf=4.4). 
+Install ESP-IDF with with the GUI [Windows installer](https://dl.espressif.com/dl/esp-idf/?idf=4.4).
 - Use default options.
-- You may install ESP-IDF to a path that is different than the default, however, keep the length of the path under 90 characters and do not include any spaces or non ASCII characters. 
+- You may install ESP-IDF to a path that is different than the default, however, keep the length of the path under 90 characters and do not include any spaces or non ASCII characters.
 - Select version v5.5.x.
 - Ensure that the `esp32s3` checkbox is selected (should be by default)
 - The installer will automatically provide
