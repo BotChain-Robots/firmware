@@ -1,8 +1,8 @@
 #include <cstring>
 
-#include "wireless/WifiManager.h"
 #include "ConfigManager.h"
 #include "constants/wifi.h"
+#include "wireless/WifiManager.h"
 
 #define TAG "WifiManager"
 #define SOFTAP_SCAN_FREQUENCY_MS 30000
@@ -35,41 +35,43 @@ int WifiManager::disconnect() {
 
         // Wifi state machine
         switch (state) {
-            case wifi_state::connect:
-                ESP_LOGI(TAG, "Attempting to connect to wifi in station mode");
-                init_connection();
-                update_state(wifi_state::connecting);
-                break;
-            case wifi_state::connecting:
-                ESP_LOGI(TAG, "connecting...");
-                handle_connecting();
-                break;
-            case wifi_state::broadcast:
-                ESP_LOGI(TAG, "Attempting to broadcast in softap mode");
-                init_softap();
-                update_state(wifi_state::broadcasting);
-                break;
-            case wifi_state::broadcasting:
-                ESP_LOGI(TAG, "Broadcasting in softap mode");
-                vTaskDelay(SOFTAP_SCAN_FREQUENCY_MS / portTICK_PERIOD_MS);  // only scan every 30 seconds, as we may disconnect users
-                handle_broadcasting();                                      // scans for known networks
-                break;
-            case wifi_state::disconnect:
-                ESP_LOGI(TAG, "Shutting down wifi (will restart)");
-                handle_disconnect();
-                update_state(wifi_state::disconnected);
-                break;
-            case wifi_state::disconnected:
-                ESP_LOGI(TAG, "Disconnected from wifi, starting back up");
-                update_state(wifi_state::connect);
-                break;
-            case wifi_state::shutdown:
-                ESP_LOGI(TAG, "Shutting down wifi (will not automatically restart)");
-                handle_disconnect();
-                update_state(wifi_state::disabled);
-            default:
-                vTaskSuspend(nullptr);
-                break;
+        case wifi_state::connect:
+            ESP_LOGI(TAG, "Attempting to connect to wifi in station mode");
+            init_connection();
+            update_state(wifi_state::connecting);
+            break;
+        case wifi_state::connecting:
+            ESP_LOGI(TAG, "connecting...");
+            handle_connecting();
+            break;
+        case wifi_state::broadcast:
+            ESP_LOGI(TAG, "Attempting to broadcast in softap mode");
+            init_softap();
+            update_state(wifi_state::broadcasting);
+            break;
+        case wifi_state::broadcasting:
+            ESP_LOGI(TAG, "Broadcasting in softap mode");
+            vTaskDelay(SOFTAP_SCAN_FREQUENCY_MS /
+                       portTICK_PERIOD_MS); // only scan every 30 seconds, as we may
+                                            // disconnect users
+            handle_broadcasting();          // scans for known networks
+            break;
+        case wifi_state::disconnect:
+            ESP_LOGI(TAG, "Shutting down wifi (will restart)");
+            handle_disconnect();
+            update_state(wifi_state::disconnected);
+            break;
+        case wifi_state::disconnected:
+            ESP_LOGI(TAG, "Disconnected from wifi, starting back up");
+            update_state(wifi_state::connect);
+            break;
+        case wifi_state::shutdown:
+            ESP_LOGI(TAG, "Shutting down wifi (will not automatically restart)");
+            handle_disconnect();
+            update_state(wifi_state::disabled);
+        default:
+            vTaskSuspend(nullptr);
+            break;
         }
 
         vTaskDelay(1000 / portTICK_PERIOD_MS);
@@ -85,7 +87,8 @@ int WifiManager::init_connection() {
         this->handle_disconnect();
     }
 
-    this->m_netif = esp_netif_create_default_wifi_sta(); // Must be destroyed with esp_netif_destroy_default_wifi()
+    this->m_netif = esp_netif_create_default_wifi_sta(); // Must be destroyed with
+                                                         // esp_netif_destroy_default_wifi()
 
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     esp_wifi_init(&cfg);
@@ -94,10 +97,7 @@ int WifiManager::init_connection() {
     esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, wifi_event_handler, this);
 
     wifi_config_t wifi_configuration;
-    wifi_configuration = {
-        .sta = {
-        }
-    };
+    wifi_configuration = {.sta = {}};
 
     std::string ssid = m_config_manager.get_wifi_ssid();
     std::string pass = m_config_manager.get_wifi_password();
@@ -146,7 +146,7 @@ int WifiManager::handle_disconnect() {
 
 int WifiManager::handle_broadcasting() {
     ESP_LOGI(TAG, "In softap mode, scanning for known networks");
-    wifi_scan_config_t scan_config {};
+    wifi_scan_config_t scan_config{};
     scan_config.ssid = reinterpret_cast<uint8_t *>(m_config_manager.get_wifi_ssid().data());
     scan_config.scan_time = {.passive = 500};
 
@@ -187,17 +187,18 @@ int WifiManager::init_softap() {
     esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, wifi_event_handler, this);
 
     wifi_config_t wifi_configuration = {
-        .ap = {
-            .ssid = WIFI_SSID,
-            .password = "",
-            .channel = SOFTAP_CHANNEL,
-            .authmode = WIFI_AUTH_OPEN,
-            .ssid_hidden = 0,
-            .max_connection = SOFTAP_MAX_CONNECTIONS,
-            .beacon_interval = 100,
-            .csa_count = 3,
-            .dtim_period = 1,
-        },
+        .ap =
+            {
+                .ssid = WIFI_SSID,
+                .password = "",
+                .channel = SOFTAP_CHANNEL,
+                .authmode = WIFI_AUTH_OPEN,
+                .ssid_hidden = 0,
+                .max_connection = SOFTAP_MAX_CONNECTIONS,
+                .beacon_interval = 100,
+                .csa_count = 3,
+                .dtim_period = 1,
+            },
     };
 
     esp_wifi_set_mode(WIFI_MODE_APSTA); // enable both ap and station mode for scanning
@@ -205,7 +206,7 @@ int WifiManager::init_softap() {
 
     esp_wifi_start();
 
-   	esp_netif_set_default_netif(esp_netif_get_handle_from_ifkey("WIFI_STA_DEF"));
+    esp_netif_set_default_netif(esp_netif_get_handle_from_ifkey("WIFI_AP_DEF"));
 
     return 0;
 }
@@ -217,8 +218,8 @@ void WifiManager::update_state(const wifi_state state) {
     xSemaphoreGive(this->m_mutex);
 }
 
-void WifiManager::wifi_event_handler(void *event_handler_arg, esp_event_base_t event_base, const int32_t event_id, void *event_data) {
-    // Passed in as a parameter since c (freertos) cannot call the member function directly.
+void WifiManager::wifi_event_handler(void *event_handler_arg, esp_event_base_t event_base,
+                                     const int32_t event_id, void *event_data) {
     const auto that = static_cast<WifiManager *>(event_handler_arg);
 
     if (WIFI_EVENT_STA_START == event_id) {
