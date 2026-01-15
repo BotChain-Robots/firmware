@@ -13,7 +13,7 @@ static_assert(FLATBUFFERS_VERSION_MAJOR == 25 &&
               FLATBUFFERS_VERSION_REVISION == 19,
              "Non-compatible flatbuffers version included");
 
-namespace movement {
+namespace Movement {
 
 struct ConditionBlob;
 
@@ -83,8 +83,8 @@ struct MovementEntry FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   uint16_t value_action() const {
     return GetField<uint16_t>(VT_VALUE_ACTION, 0);
   }
-  const movement::ConditionBlob *condition() const {
-    return GetStruct<const movement::ConditionBlob *>(VT_CONDITION);
+  const Movement::ConditionBlob *condition() const {
+    return GetStruct<const Movement::ConditionBlob *>(VT_CONDITION);
   }
   uint8_t ack() const {
     return GetField<uint8_t>(VT_ACK, 0);
@@ -101,7 +101,7 @@ struct MovementEntry FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
            VerifyField<uint16_t>(verifier, VT_BOARD_ID, 2) &&
            VerifyField<uint8_t>(verifier, VT_MODULE_TYPE, 1) &&
            VerifyField<uint16_t>(verifier, VT_VALUE_ACTION, 2) &&
-           VerifyField<movement::ConditionBlob>(verifier, VT_CONDITION, 2) &&
+           VerifyField<Movement::ConditionBlob>(verifier, VT_CONDITION, 2) &&
            VerifyField<uint8_t>(verifier, VT_ACK, 1) &&
            VerifyField<uint16_t>(verifier, VT_ACK_TTL_MS, 2) &&
            VerifyField<uint16_t>(verifier, VT_POST_DELAY_MS, 2) &&
@@ -122,7 +122,7 @@ struct MovementEntryBuilder {
   void add_value_action(uint16_t value_action) {
     fbb_.AddElement<uint16_t>(MovementEntry::VT_VALUE_ACTION, value_action, 0);
   }
-  void add_condition(const movement::ConditionBlob *condition) {
+  void add_condition(const Movement::ConditionBlob *condition) {
     fbb_.AddStruct(MovementEntry::VT_CONDITION, condition);
   }
   void add_ack(uint8_t ack) {
@@ -150,7 +150,7 @@ inline ::flatbuffers::Offset<MovementEntry> CreateMovementEntry(
     uint16_t board_id = 0,
     uint8_t module_type = 0,
     uint16_t value_action = 0,
-    const movement::ConditionBlob *condition = nullptr,
+    const Movement::ConditionBlob *condition = nullptr,
     uint8_t ack = 0,
     uint16_t ack_ttl_ms = 0,
     uint16_t post_delay_ms = 0) {
@@ -174,8 +174,8 @@ struct MovementSet FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   uint8_t num_movements() const {
     return GetField<uint8_t>(VT_NUM_MOVEMENTS, 0);
   }
-  const ::flatbuffers::Vector<::flatbuffers::Offset<movement::MovementEntry>> *movements() const {
-    return GetPointer<const ::flatbuffers::Vector<::flatbuffers::Offset<movement::MovementEntry>> *>(VT_MOVEMENTS);
+  const ::flatbuffers::Vector<::flatbuffers::Offset<Movement::MovementEntry>> *movements() const {
+    return GetPointer<const ::flatbuffers::Vector<::flatbuffers::Offset<Movement::MovementEntry>> *>(VT_MOVEMENTS);
   }
   template <bool B = false>
   bool Verify(::flatbuffers::VerifierTemplate<B> &verifier) const {
@@ -195,7 +195,7 @@ struct MovementSetBuilder {
   void add_num_movements(uint8_t num_movements) {
     fbb_.AddElement<uint8_t>(MovementSet::VT_NUM_MOVEMENTS, num_movements, 0);
   }
-  void add_movements(::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<movement::MovementEntry>>> movements) {
+  void add_movements(::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<Movement::MovementEntry>>> movements) {
     fbb_.AddOffset(MovementSet::VT_MOVEMENTS, movements);
   }
   explicit MovementSetBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
@@ -212,7 +212,7 @@ struct MovementSetBuilder {
 inline ::flatbuffers::Offset<MovementSet> CreateMovementSet(
     ::flatbuffers::FlatBufferBuilder &_fbb,
     uint8_t num_movements = 0,
-    ::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<movement::MovementEntry>>> movements = 0) {
+    ::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<Movement::MovementEntry>>> movements = 0) {
   MovementSetBuilder builder_(_fbb);
   builder_.add_movements(movements);
   builder_.add_num_movements(num_movements);
@@ -222,46 +222,46 @@ inline ::flatbuffers::Offset<MovementSet> CreateMovementSet(
 inline ::flatbuffers::Offset<MovementSet> CreateMovementSetDirect(
     ::flatbuffers::FlatBufferBuilder &_fbb,
     uint8_t num_movements = 0,
-    const std::vector<::flatbuffers::Offset<movement::MovementEntry>> *movements = nullptr) {
-  auto movements__ = movements ? _fbb.CreateVector<::flatbuffers::Offset<movement::MovementEntry>>(*movements) : 0;
-  return movement::CreateMovementSet(
+    const std::vector<::flatbuffers::Offset<Movement::MovementEntry>> *movements = nullptr) {
+  auto movements__ = movements ? _fbb.CreateVector<::flatbuffers::Offset<Movement::MovementEntry>>(*movements) : 0;
+  return Movement::CreateMovementSet(
       _fbb,
       num_movements,
       movements__);
 }
 
-inline const movement::MovementSet *GetMovementSet(const void *buf) {
-  return ::flatbuffers::GetRoot<movement::MovementSet>(buf);
+inline const Movement::MovementSet *GetMovementSet(const void *buf) {
+  return ::flatbuffers::GetRoot<Movement::MovementSet>(buf);
 }
 
-inline const movement::MovementSet *GetSizePrefixedMovementSet(const void *buf) {
-  return ::flatbuffers::GetSizePrefixedRoot<movement::MovementSet>(buf);
+inline const Movement::MovementSet *GetSizePrefixedMovementSet(const void *buf) {
+  return ::flatbuffers::GetSizePrefixedRoot<Movement::MovementSet>(buf);
 }
 
 template <bool B = false>
 inline bool VerifyMovementSetBuffer(
     ::flatbuffers::VerifierTemplate<B> &verifier) {
-  return verifier.template VerifyBuffer<movement::MovementSet>(nullptr);
+  return verifier.template VerifyBuffer<Movement::MovementSet>(nullptr);
 }
 
 template <bool B = false>
 inline bool VerifySizePrefixedMovementSetBuffer(
     ::flatbuffers::VerifierTemplate<B> &verifier) {
-  return verifier.template VerifySizePrefixedBuffer<movement::MovementSet>(nullptr);
+  return verifier.template VerifySizePrefixedBuffer<Movement::MovementSet>(nullptr);
 }
 
 inline void FinishMovementSetBuffer(
     ::flatbuffers::FlatBufferBuilder &fbb,
-    ::flatbuffers::Offset<movement::MovementSet> root) {
+    ::flatbuffers::Offset<Movement::MovementSet> root) {
   fbb.Finish(root);
 }
 
 inline void FinishSizePrefixedMovementSetBuffer(
     ::flatbuffers::FlatBufferBuilder &fbb,
-    ::flatbuffers::Offset<movement::MovementSet> root) {
+    ::flatbuffers::Offset<Movement::MovementSet> root) {
   fbb.FinishSizePrefixed(root);
 }
 
-}  // namespace movement
+}  // namespace Movement
 
 #endif  // FLATBUFFERS_GENERATED_MOVEMENT_MOVEMENT_H_
