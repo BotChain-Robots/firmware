@@ -1,11 +1,13 @@
 #include <cmath>
 
-#include "control/DCMotorActuator.h"
-#include "esp_attr.h"
-#include "util/number_utils.h"
-#include "driver/ledc.h"
-#include "constants/module.h"
 #include "AngleControlMessageBuilder.h"
+#include "SensorMessageBuilder.h"
+#include "constants/module.h"
+#include "control/DCMotorActuator.h"
+#include "driver/ledc.h"
+#include "esp_attr.h"
+#include "flatbuffers_generated/SensorMessage_generated.h"
+#include "util/number_utils.h"
 
 #define LOW_DUTY 200
 #define HIGH_DUTY 1000
@@ -42,14 +44,14 @@ DCMotorActuator::DCMotorActuator() {
     ESP_ERROR_CHECK(ledc_channel_config(&fwd_ledc_channel));
 
     ledc_channel_config_t rev_ledc_channel = {
-            .gpio_num = DC_MOTOR_PWM_REV,
-            .speed_mode = LEDC_LOW_SPEED_MODE,
-            .channel = REV_CHANNEL,
-            .intr_type = LEDC_INTR_DISABLE,
-            .timer_sel = LEDC_TIMER_0,
-            .duty = 0,
-            .hpoint = 0,
-        };
+        .gpio_num = DC_MOTOR_PWM_REV,
+        .speed_mode = LEDC_LOW_SPEED_MODE,
+        .channel = REV_CHANNEL,
+        .intr_type = LEDC_INTR_DISABLE,
+        .timer_sel = LEDC_TIMER_0,
+        .duty = 0,
+        .hpoint = 0,
+    };
 
     ESP_ERROR_CHECK(ledc_channel_config(&rev_ledc_channel));
 
@@ -60,7 +62,8 @@ DCMotorActuator::DCMotorActuator() {
     this->m_integral = 0;
     this->m_last_error = 0;
 
-    xTaskCreate(reinterpret_cast<TaskFunction_t>(pid_task), "pid_task", 3072, this, 1, &this->m_pid_task);
+    xTaskCreate(reinterpret_cast<TaskFunction_t>(pid_task), "pid_task", 3072, this, 1,
+                &this->m_pid_task);
 }
 
 DCMotorActuator::~DCMotorActuator() {
@@ -70,7 +73,7 @@ DCMotorActuator::~DCMotorActuator() {
 volatile int32_t encoder_ticks = 0;
 volatile int8_t direction = 0;
 
-static void IRAM_ATTR encoder_isr_handler(void* arg) {
+static void IRAM_ATTR encoder_isr_handler(void *arg) {
     const int a = gpio_get_level(static_cast<gpio_num_t>(DC_ENCODER_A));
     const int b = gpio_get_level(static_cast<gpio_num_t>(DC_ENCODER_B));
 
@@ -98,12 +101,13 @@ void DCMotorActuator::setup_encoder() {
 }
 
 void DCMotorActuator::actuate(uint8_t *cmd) {
-    const auto* angleControlCmd = Flatbuffers::AngleControlMessageBuilder::parse_angle_control_message(cmd);
+    const auto *angleControlCmd =
+        Flatbuffers::AngleControlMessageBuilder::parse_angle_control_message(cmd);
     this->m_target_angle = angleControlCmd->angle();
 }
 
-void DCMotorActuator::pid_task(char* args) {
-    const auto that = reinterpret_cast<DCMotorActuator*>(args);
+void DCMotorActuator::pid_task(char *args) {
+    const auto that = reinterpret_cast<DCMotorActuator *>(args);
 
     while (true) {
         that->m_current_angle = (encoder_ticks * 360.0) / (GEAR_RATIO * TICKS_PER_ROTATION);
@@ -119,7 +123,8 @@ void DCMotorActuator::pid_task(char* args) {
         } else if (control < -1) {
             control = -1;
         }
-        const auto pwm = util::mapRange<double>(std::abs(control), 0, 1, MIN_PWM_DUTY, MAX_PWM_DUTY);
+        const auto pwm =
+            util::mapRange<double>(std::abs(control), 0, 1, MIN_PWM_DUTY, MAX_PWM_DUTY);
 
         if (std::abs(control) < DEADZONE) {
             ESP_ERROR_CHECK(ledc_set_duty(LEDC_LOW_SPEED_MODE, REV_CHANNEL, 0));
@@ -149,7 +154,8 @@ void DCMotorActuator::pid_task(char* args) {
     }
 }
 
-std::vector<Flatbuffers::SensorValueInstance> DCMotorActuator::get_sensor_data() {
+std::vector<Flatbuffers::sensor_value> DCMotorActuator::get_sensor_data() {
     // todo: this really needs to return a int32, should also return two sensor data items, one for target one for current
-    return {{(uint16_t)(m_current_angle)}};
+    return {Flatbuffers::target_angle{(int16_t)m_current_angle},
+            Flatbuffers::current_angle{(int16_t)m_current_angle}};
 }

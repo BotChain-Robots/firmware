@@ -7,16 +7,17 @@
 #ifndef SERVO1ACTUATOR_H
 #define SERVO1ACTUATOR_H
 
-#include <cstdint>
 #include "IActuator.h"
 #include "ISensor.h"
+#include <cstdint>
 
 class Servo1Actuator final : public IActuator {
-public:
+  public:
     Servo1Actuator();
     void actuate(std::uint8_t *cmd) override;
-    std::vector<Flatbuffers::SensorValueInstance> get_sensor_data() override;
-private:
+    std::vector<Flatbuffers::sensor_value> get_sensor_data() override;
+
+  private:
     uint16_t m_target = 90;
 };
 
