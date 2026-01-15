@@ -21,7 +21,7 @@ class MovementSetManager {
 
     private:
         std::unique_ptr<TopologyManager> topology_manager;
-        std::vector<struct MovementEntry> movements;
+        // std::vector<struct MovementEntry> movements;
         nvs_handle_t handle;
 };
 
