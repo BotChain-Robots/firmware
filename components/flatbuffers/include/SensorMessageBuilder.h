@@ -6,19 +6,27 @@
 #include "flatbuffers_generated/SensorMessage_generated.h"
 
 namespace Flatbuffers {
-    struct SensorValueInstance {
-        uint16_t angle; // todo: change to a variant
-    };
 
-    class SensorMessageBuilder{
-    public:
-        SensorMessageBuilder() : builder_(128) {}
+struct target_angle {
+    int16_t angle;
+};
 
-        SerializedMessage build_sensor_message(std::vector<SensorValueInstance>& values);
+struct current_angle {
+    int16_t angle;
+};
 
-    private:
-        flatbuffers::FlatBufferBuilder builder_;
-    };
-}
+typedef std::variant<target_angle, current_angle> sensor_value;
+
+class SensorMessageBuilder {
+  public:
+    SensorMessageBuilder() : builder_(128) {
+    }
+
+    SerializedMessage build_sensor_message(std::vector<sensor_value> &values);
+
+  private:
+    flatbuffers::FlatBufferBuilder builder_;
+};
+} // namespace Flatbuffers
 
 #endif //SENSORMESSAGEBUILDER_H

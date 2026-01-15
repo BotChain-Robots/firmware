@@ -11,10 +11,11 @@
 
 
 class IActuator {
-public:
-    virtual ~IActuator() {}
+  public:
+    virtual ~IActuator() {
+    }
     virtual void actuate(uint8_t *cmd) = 0;
-    virtual std::vector<Flatbuffers::SensorValueInstance> get_sensor_data() = 0;
+    virtual std::vector<Flatbuffers::sensor_value> get_sensor_data() = 0;
 };
 
 #endif //IACTUATOR_H

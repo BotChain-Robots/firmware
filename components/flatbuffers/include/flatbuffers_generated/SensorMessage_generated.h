@@ -14,31 +14,37 @@
 
 namespace Messaging {
 
-struct Angle;
-struct AngleBuilder;
+struct TargetAngle;
+struct TargetAngleBuilder;
+
+struct CurrentAngle;
+struct CurrentAngleBuilder;
 
 struct SensorMessage;
 struct SensorMessageBuilder;
 
 enum SensorValue : uint8_t {
   SensorValue_NONE = 0,
-  SensorValue_Angle = 1,
+  SensorValue_TargetAngle = 1,
+  SensorValue_CurrentAngle = 2,
   SensorValue_MIN = SensorValue_NONE,
-  SensorValue_MAX = SensorValue_Angle
+  SensorValue_MAX = SensorValue_CurrentAngle
 };
 
-inline const SensorValue (&EnumValuesSensorValue())[2] {
-  static const SensorValue values[] = {SensorValue_NONE, SensorValue_Angle};
+inline const SensorValue (&EnumValuesSensorValue())[3] {
+  static const SensorValue values[] = {
+      SensorValue_NONE, SensorValue_TargetAngle, SensorValue_CurrentAngle};
   return values;
 }
 
 inline const char *const *EnumNamesSensorValue() {
-  static const char *const names[3] = {"NONE", "Angle", nullptr};
+  static const char *const names[4] = {"NONE", "TargetAngle", "CurrentAngle",
+                                       nullptr};
   return names;
 }
 
 inline const char *EnumNameSensorValue(SensorValue e) {
-  if (::flatbuffers::IsOutRange(e, SensorValue_NONE, SensorValue_Angle))
+  if (::flatbuffers::IsOutRange(e, SensorValue_NONE, SensorValue_CurrentAngle))
     return "";
   const size_t index = static_cast<size_t>(e);
   return EnumNamesSensorValue()[index];
@@ -48,8 +54,12 @@ template <typename T> struct SensorValueTraits {
   static const SensorValue enum_value = SensorValue_NONE;
 };
 
-template <> struct SensorValueTraits<Messaging::Angle> {
-  static const SensorValue enum_value = SensorValue_Angle;
+template <> struct SensorValueTraits<Messaging::TargetAngle> {
+  static const SensorValue enum_value = SensorValue_TargetAngle;
+};
+
+template <> struct SensorValueTraits<Messaging::CurrentAngle> {
+  static const SensorValue enum_value = SensorValue_CurrentAngle;
 };
 
 bool VerifySensorValue(::flatbuffers::Verifier &verifier, const void *obj,
@@ -59,8 +69,8 @@ bool VerifySensorValueVector(
     const ::flatbuffers::Vector<::flatbuffers::Offset<void>> *values,
     const ::flatbuffers::Vector<uint8_t> *types);
 
-struct Angle FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
-  typedef AngleBuilder Builder;
+struct TargetAngle FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
+  typedef TargetAngleBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_VALUE = 4
   };
@@ -71,26 +81,64 @@ struct Angle FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   }
 };
 
-struct AngleBuilder {
-  typedef Angle Table;
+struct TargetAngleBuilder {
+  typedef TargetAngle Table;
   ::flatbuffers::FlatBufferBuilder &fbb_;
   ::flatbuffers::uoffset_t start_;
   void add_value(int16_t value) {
-    fbb_.AddElement<int16_t>(Angle::VT_VALUE, value, 0);
+    fbb_.AddElement<int16_t>(TargetAngle::VT_VALUE, value, 0);
   }
-  explicit AngleBuilder(::flatbuffers::FlatBufferBuilder &_fbb) : fbb_(_fbb) {
+  explicit TargetAngleBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
+      : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
-  ::flatbuffers::Offset<Angle> Finish() {
+  ::flatbuffers::Offset<TargetAngle> Finish() {
     const auto end = fbb_.EndTable(start_);
-    auto o = ::flatbuffers::Offset<Angle>(end);
+    auto o = ::flatbuffers::Offset<TargetAngle>(end);
     return o;
   }
 };
 
-inline ::flatbuffers::Offset<Angle>
-CreateAngle(::flatbuffers::FlatBufferBuilder &_fbb, int16_t value = 0) {
-  AngleBuilder builder_(_fbb);
+inline ::flatbuffers::Offset<TargetAngle>
+CreateTargetAngle(::flatbuffers::FlatBufferBuilder &_fbb, int16_t value = 0) {
+  TargetAngleBuilder builder_(_fbb);
+  builder_.add_value(value);
+  return builder_.Finish();
+}
+
+struct CurrentAngle FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
+  typedef CurrentAngleBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_VALUE = 4
+  };
+  int16_t value() const { return GetField<int16_t>(VT_VALUE, 0); }
+  bool Verify(::flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyField<int16_t>(verifier, VT_VALUE, 2) && verifier.EndTable();
+  }
+};
+
+struct CurrentAngleBuilder {
+  typedef CurrentAngle Table;
+  ::flatbuffers::FlatBufferBuilder &fbb_;
+  ::flatbuffers::uoffset_t start_;
+  void add_value(int16_t value) {
+    fbb_.AddElement<int16_t>(CurrentAngle::VT_VALUE, value, 0);
+  }
+  explicit CurrentAngleBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
+      : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  ::flatbuffers::Offset<CurrentAngle> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = ::flatbuffers::Offset<CurrentAngle>(end);
+    return o;
+  }
+};
+
+inline ::flatbuffers::Offset<CurrentAngle>
+CreateCurrentAngle(::flatbuffers::FlatBufferBuilder &_fbb, int16_t value = 0) {
+  CurrentAngleBuilder builder_(_fbb);
   builder_.add_value(value);
   return builder_.Finish();
 }
@@ -171,8 +219,12 @@ inline bool VerifySensorValue(::flatbuffers::Verifier &verifier,
   case SensorValue_NONE: {
     return true;
   }
-  case SensorValue_Angle: {
-    auto ptr = reinterpret_cast<const Messaging::Angle *>(obj);
+  case SensorValue_TargetAngle: {
+    auto ptr = reinterpret_cast<const Messaging::TargetAngle *>(obj);
+    return verifier.VerifyTable(ptr);
+  }
+  case SensorValue_CurrentAngle: {
+    auto ptr = reinterpret_cast<const Messaging::CurrentAngle *>(obj);
     return verifier.VerifyTable(ptr);
   }
   default:
