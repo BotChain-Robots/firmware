@@ -1,6 +1,5 @@
 #ifndef RMT_COMMUNICATIONS
 #define RMT_COMMUNICATIONS
-
 #include <cstring>
 
 #include "esp_event.h"

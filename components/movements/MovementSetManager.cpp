@@ -1,4 +1,4 @@
-#include "MovementBlobs.h"
+#include "MovementSetManager.h"
 #include "esp_log.h"
 #ifdef MOVEMENTS
 
@@ -14,5 +14,33 @@ MovementSetManager::MovementSetManager(){
 MovementSetManager::~MovementSetManager(){
     nvs_close(handle);
 }
+
+// esp_err_t MovementSetManager::add_movement(struct MovementEntry& entry, uint8_t& index){
+//     return ESP_OK;
+// }
+
+// esp_err_t MovementSetManager::remove_movement(uint8_t index){
+//     return ESP_OK;
+// }
+
+// esp_err_t MovementSetManager::update_movement(struct MovementEntry& entry, uint8_t index){
+//     return ESP_OK;
+// }
+
+// esp_err_t MovementSetManager::get_curr_movement_set(struct MovementSet& set){
+//     return ESP_OK;
+// }
+
+// esp_err_t MovementSetManager::verify_movement_set(){
+//     return ESP_OK;
+// }
+
+// esp_err_t MovementSetManager::get_nvs_movement_set(struct MovementSet& set){
+//     return ESP_OK;
+// }
+
+// esp_err_t MovementSetManager::write_nvs_movement_set(){
+//     return ESP_OK;
+// }
 
 #endif //MOVEMENTS
