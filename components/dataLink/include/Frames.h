@@ -4,40 +4,8 @@
 #include <variant>
 #include <cstdint>
 #include <vector>
+#include "constants/datalink.h"
 
-#define BROADCAST_ADDR 0xFF //used for discovery (finding the board's neighbours). this will mean the board ids will have 2^8-2 = 254 unique IDs that could be assigned
-#define PC_ADDR 0x0 //setting 0 to be the PC
-
-#define START_OF_FRAME 0xAB //0b1010_1011 - denotes the start of frame
-
-#define MAX_FRAME_SIZE 121 //Max 121B (due to rmt) - note this includes the overhead of the frame. the actual payload max depends on the frame type (eg. 121 - 9 B is the max control data length)
-
-#define MAX_GENERIC_NUM_FRAG (1 << 16) // Max 2**16 Fragments can be made with a generic frame (total 2**16 *MAX_GENERIC_DATA_LEN B of data can be sent ~ 6.7 MiB)
-
-#define MAX_FRAME_QUEUE_SIZE 15 //Size of the queue for the frame scheduler (per channel)
-
-//Flags
-#define FLAG_FRAG 0x8 //0b1000 //this fragmented frame is part of a larger frame
-#define FLAG_DISCOVERY 0x4 //0b0100
-#define FLAG_NEIGH_TABLE 0x2 //0b0010 - used to denote the frame contains the neighbour tables (used for finding the configuration/topology of the network); similar to an ARP or MAC table
-#define FLAG_ACK 0x1 //0b0001_0000 - used for confirming receipt of different types of frames from the neighbours
-
-#define GET_TYPE(x) ((x) & 0xF0)
-#define GET_FLAG(x) ((x) & 0x0F)
-#define MAKE_TYPE_FLAG(type, flag) ((uint8_t)((type & 0xF0) | (flag & 0xF)))
-#define IS_CONTROL_FRAME(x) (((x) & 0x80) != 0)
-
-#define CONTROL_FRAME_OVERHEAD 9
-#define GENERIC_FRAME_OVERHEAD 14
-
-#define MAX_GENERIC_DATA_LEN (MAX_FRAME_SIZE - GENERIC_FRAME_OVERHEAD)
-#define MAX_CONTROL_DATA_LEN (MAX_FRAME_SIZE - CONTROL_FRAME_OVERHEAD)
-
-//Generic Frame Fragment ACK
-#define GENERIC_FRAG_ACK_DATA_SIZE 7
-#define GENERIC_FRAG_ACK_PREAMBLE 0x69
-
-#define CONTROL_FRAME_TYPE 0x80 //if the frame type MSB is set to 1, use the control frame
 //Types (total 2^4 = 16 different types)
 enum class FrameType : uint8_t {
     //Control Frames

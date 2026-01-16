@@ -1,1 +1,1 @@
-idf_component_register(INCLUDE_DIRS "include" PRIV_REQUIRES "flatbuffers")
+idf_component_register(INCLUDE_DIRS "include" REQUIRES "flatbuffers")
