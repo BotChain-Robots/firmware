@@ -2,18 +2,7 @@
 #include "Frames.h"
 #include "esp_timer.h"
 #include <cstdint>
-
-#define SCHEDULER_MUTEX_WAIT 10 //max time duration to wait
-#define SCHEDULER_PERIOD_MS 10
-#define RECEIVE_TASK_PERIOD_MS 2
-
-#define GENERIC_FRAME_SLIDING_WINDOW_SIZE 5 //defines the maximum size of the sliding window before resending previously un-ack'd fragments
-#define SLIDING_WINDOW_MUTEX_TIMEOUT_MS 5
-#define GENERIC_FRAME_MOD_TIMEOUT 10 //be scheduled at most 9 + GENERIC_FRAME_MIN_TIMEOUT times before sending another fragment
-#define GENERIC_FRAME_MIN_TIMEOUT 10
-
-#define SEND_ACK_PERIOD_MS 50
-#define SEND_ACK_MUTEX_WAIT 10
+#include "constants/datalink.h"
 
 //Metadata representing the frame to be sent but is currently scheduled
 typedef struct _frame_scheduler_metadata {
