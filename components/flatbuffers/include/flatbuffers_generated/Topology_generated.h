@@ -20,8 +20,8 @@ struct ChannelBoardConn;
 struct NeighbourBlob;
 struct NeighbourBlobBuilder;
 
-struct Topology;
-struct TopologyBuilder;
+struct TopologyInfo;
+struct TopologyInfoBuilder;
 
 FLATBUFFERS_MANUALLY_ALIGNED_STRUCT(2) ChannelBoardConn FLATBUFFERS_FINAL_CLASS {
  private:
@@ -127,8 +127,8 @@ inline ::flatbuffers::Offset<NeighbourBlob> CreateNeighbourBlobDirect(
       neighbour_connections__);
 }
 
-struct Topology FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
-  typedef TopologyBuilder Builder;
+struct TopologyInfo FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
+  typedef TopologyInfoBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_NUM_BOARDS = 4,
     VT_BOARDS = 6
@@ -150,77 +150,77 @@ struct Topology FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   }
 };
 
-struct TopologyBuilder {
-  typedef Topology Table;
+struct TopologyInfoBuilder {
+  typedef TopologyInfo Table;
   ::flatbuffers::FlatBufferBuilder &fbb_;
   ::flatbuffers::uoffset_t start_;
   void add_num_boards(uint16_t num_boards) {
-    fbb_.AddElement<uint16_t>(Topology::VT_NUM_BOARDS, num_boards, 0);
+    fbb_.AddElement<uint16_t>(TopologyInfo::VT_NUM_BOARDS, num_boards, 0);
   }
   void add_boards(::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<Topology::NeighbourBlob>>> boards) {
-    fbb_.AddOffset(Topology::VT_BOARDS, boards);
+    fbb_.AddOffset(TopologyInfo::VT_BOARDS, boards);
   }
-  explicit TopologyBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
+  explicit TopologyInfoBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
-  ::flatbuffers::Offset<Topology> Finish() {
+  ::flatbuffers::Offset<TopologyInfo> Finish() {
     const auto end = fbb_.EndTable(start_);
-    auto o = ::flatbuffers::Offset<Topology>(end);
+    auto o = ::flatbuffers::Offset<TopologyInfo>(end);
     return o;
   }
 };
 
-inline ::flatbuffers::Offset<Topology> CreateTopology(
+inline ::flatbuffers::Offset<TopologyInfo> CreateTopologyInfo(
     ::flatbuffers::FlatBufferBuilder &_fbb,
     uint16_t num_boards = 0,
     ::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<Topology::NeighbourBlob>>> boards = 0) {
-  TopologyBuilder builder_(_fbb);
+  TopologyInfoBuilder builder_(_fbb);
   builder_.add_boards(boards);
   builder_.add_num_boards(num_boards);
   return builder_.Finish();
 }
 
-inline ::flatbuffers::Offset<Topology> CreateTopologyDirect(
+inline ::flatbuffers::Offset<TopologyInfo> CreateTopologyInfoDirect(
     ::flatbuffers::FlatBufferBuilder &_fbb,
     uint16_t num_boards = 0,
     const std::vector<::flatbuffers::Offset<Topology::NeighbourBlob>> *boards = nullptr) {
   auto boards__ = boards ? _fbb.CreateVector<::flatbuffers::Offset<Topology::NeighbourBlob>>(*boards) : 0;
-  return Topology::CreateTopology(
+  return Topology::CreateTopologyInfo(
       _fbb,
       num_boards,
       boards__);
 }
 
-inline const Topology::Topology *GetTopology(const void *buf) {
-  return ::flatbuffers::GetRoot<Topology::Topology>(buf);
+inline const Topology::TopologyInfo *GetTopologyInfo(const void *buf) {
+  return ::flatbuffers::GetRoot<Topology::TopologyInfo>(buf);
 }
 
-inline const Topology::Topology *GetSizePrefixedTopology(const void *buf) {
-  return ::flatbuffers::GetSizePrefixedRoot<Topology::Topology>(buf);
-}
-
-template <bool B = false>
-inline bool VerifyTopologyBuffer(
-    ::flatbuffers::VerifierTemplate<B> &verifier) {
-  return verifier.template VerifyBuffer<Topology::Topology>(nullptr);
+inline const Topology::TopologyInfo *GetSizePrefixedTopologyInfo(const void *buf) {
+  return ::flatbuffers::GetSizePrefixedRoot<Topology::TopologyInfo>(buf);
 }
 
 template <bool B = false>
-inline bool VerifySizePrefixedTopologyBuffer(
+inline bool VerifyTopologyInfoBuffer(
     ::flatbuffers::VerifierTemplate<B> &verifier) {
-  return verifier.template VerifySizePrefixedBuffer<Topology::Topology>(nullptr);
+  return verifier.template VerifyBuffer<Topology::TopologyInfo>(nullptr);
 }
 
-inline void FinishTopologyBuffer(
+template <bool B = false>
+inline bool VerifySizePrefixedTopologyInfoBuffer(
+    ::flatbuffers::VerifierTemplate<B> &verifier) {
+  return verifier.template VerifySizePrefixedBuffer<Topology::TopologyInfo>(nullptr);
+}
+
+inline void FinishTopologyInfoBuffer(
     ::flatbuffers::FlatBufferBuilder &fbb,
-    ::flatbuffers::Offset<Topology::Topology> root) {
+    ::flatbuffers::Offset<Topology::TopologyInfo> root) {
   fbb.Finish(root);
 }
 
-inline void FinishSizePrefixedTopologyBuffer(
+inline void FinishSizePrefixedTopologyInfoBuffer(
     ::flatbuffers::FlatBufferBuilder &fbb,
-    ::flatbuffers::Offset<Topology::Topology> root) {
+    ::flatbuffers::Offset<Topology::TopologyInfo> root) {
   fbb.FinishSizePrefixed(root);
 }
 
