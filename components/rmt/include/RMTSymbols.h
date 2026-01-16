@@ -1,11 +1,7 @@
 #ifdef RMT_COMMUNICATIONS
 
 #include "driver/rmt_tx.h"
-
-#define RMT_RESOLUTION_HZ 4 * 1000 * 1000 // 4 MHz resolution
-#define RMT_DURATION_SYMBOL 2 //1 us
-
-#define RMT_DURATION_MAX (2 * RMT_DURATION_SYMBOL)
+#include "constants/rmt.h"
 
 //MANCHESTER ENCODING (ETHERNET STANDARD)
 
