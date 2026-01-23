@@ -1,4 +1,4 @@
-#if !defined(RMT_TEST) || (defined(RMT_TEST) && RMT_TEST == 0)
+#if (!defined(RMT_TEST) || (defined(RMT_TEST) && RMT_TEST == 0)) && (!defined(PP_MOVE) || (defined(PP_MOVE) && PP_MOVE == 0))
 // #include <cstdio>
 // #include <memory>
 
