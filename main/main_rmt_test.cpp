@@ -1,4 +1,4 @@
-#if defined(RMT_TEST) && RMT_TEST == 1
+#if (defined(RMT_TEST) && RMT_TEST == 1) && (!defined(PP_MOVE) || (defined(PP_MOVE) && PP_MOVE == 0))
 //Used for link layer testing (change name to main.cpp to use)
 #include <cstdio>
 #include <memory>
