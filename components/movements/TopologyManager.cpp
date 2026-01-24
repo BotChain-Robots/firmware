@@ -35,16 +35,18 @@ TopologyManager::~TopologyManager(){
  * 
  * 4. All `board_id` is not unique in the vector - Should be a 1:1 connection between the boards
  */
-esp_err_t TopologyManager::add_board_to_topology(std::vector<std::pair<uint8_t, uint16_t>>& connections, uint16_t curr_board_id){
+esp_err_t TopologyManager::add_board_to_topology(const std::vector<std::pair<uint8_t, uint16_t>>& connections, uint16_t curr_board_id){
     if (!ready){
         return ESP_ERR_INVALID_STATE;
     }
 
     if (connections.size() == 0 || connections.size() > MAX_CHANNELS){
+        ESP_LOGE(TOPOLOGY_DEBUG_TAG, "vector size is invalid. got size %d", connections.size());
         return ESP_ERR_INVALID_ARG;
     }
 
     if (curr_board_id == PC_ADDR || curr_board_id == BROADCAST_ADDR){
+        ESP_LOGE(TOPOLOGY_DEBUG_TAG, "curr_board_id is invalid. got size %d", curr_board_id);
         return ESP_ERR_INVALID_ARG;
     }
 
@@ -54,8 +56,9 @@ esp_err_t TopologyManager::add_board_to_topology(std::vector<std::pair<uint8_t, 
     std::vector<Topology::ChannelBoardConn> conns;
 
     for (const std::pair<uint8_t, uint16_t>& pair : connections){
-        if (pair.second >= MAX_CHANNELS || pair.first == curr_board_id || pair.first == PC_ADDR 
-            || pair.first == BROADCAST_ADDR || check_set.find(pair.first) != check_set.end()){
+        if (pair.first >= MAX_CHANNELS || pair.second == curr_board_id || pair.second == PC_ADDR 
+            || pair.second == BROADCAST_ADDR || check_set.find(pair.first) != check_set.end()){
+            ESP_LOGE(TOPOLOGY_DEBUG_TAG, "Invalid pair detected. Got: %d -> %d on Ch. %d", curr_board_id, pair.second, pair.first);
             return ESP_ERR_INVALID_ARG;
         }
 
@@ -123,6 +126,7 @@ esp_err_t TopologyManager::verify_topology(){
     for (const auto& pair : topology){
         for (const Topology::ChannelBoardConn& conn : pair.second){
             if (topology.find(conn.board_id()) == topology.end()){
+                ESP_LOGE(TOPOLOGY_DEBUG_TAG, "Could not find board %d in topology", conn.board_id());
                 return ESP_ERR_INVALID_STATE; //could not find reciprocal board
             }
 
@@ -135,6 +139,7 @@ esp_err_t TopologyManager::verify_topology(){
                 }
             }
             if (!found){
+                ESP_LOGE(TOPOLOGY_DEBUG_TAG, "Board %d does not have a connection to board %d", conn.board_id(), pair.first);
                 return ESP_ERR_INVALID_STATE; //reciprocal board does not have a connection back to `pair.first`
             }
 
@@ -152,6 +157,8 @@ esp_err_t TopologyManager::verify_topology(){
         uint16_t curr_node = backtrack.top();
         backtrack.pop();
 
+        // printf("On board %d\n", curr_node);
+
         if (visited.find(curr_node) != visited.end()) {
             continue;
         }
@@ -161,18 +168,21 @@ esp_err_t TopologyManager::verify_topology(){
 
         const std::vector<Topology::ChannelBoardConn>& conns = topology[curr_node];
 
+        // printf("Board %d has %d connections\n", curr_node, conns.size());
+
         for (const Topology::ChannelBoardConn& conn : conns) {
             uint16_t next = conn.board_id();
-            if (visited.find(next) != visited.end()) {
+            if (visited.find(next) == visited.end()) {
+                // printf("Found new board %d\n", next);
                 backtrack.push(next);
             }
         }
     }
 
     if (count != topology.size()){
+        ESP_LOGE(TOPOLOGY_DEBUG_TAG, "Not all boards could be traversed to all other boards. Got %d out of total %d boards", count, topology.size());
         return ESP_ERR_INVALID_STATE;
     }
-
 
     return ESP_OK;
 }
