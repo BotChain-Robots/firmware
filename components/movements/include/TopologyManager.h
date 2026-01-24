@@ -14,11 +14,13 @@
 #include <stack>
 #include <algorithm>
 
+#define TOPOLOGY_DEBUG_TAG "topology"
+
 class TopologyManager {
     public:
         TopologyManager();
         ~TopologyManager();
-        esp_err_t add_board_to_topology(std::vector<std::pair<uint8_t, uint16_t>>& connections, uint16_t curr_board_id);
+        esp_err_t add_board_to_topology(const std::vector<std::pair<uint8_t, uint16_t>>& connections, uint16_t curr_board_id);
         esp_err_t remove_board_from_topology(uint16_t board_id);
         esp_err_t get_board_in_topology(std::vector<std::pair<uint8_t, uint16_t>>& connections, uint16_t curr_board_id);
         esp_err_t verify_topology();
