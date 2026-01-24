@@ -8,11 +8,20 @@ if(DEFINED RMT_TEST AND RMT_TEST EQUAL 1)
     message(STATUS "Building for testing RMT/Link Layer Functionality with main_rmt_test.cpp")
     list(REMOVE_ITEM ALL_SRCS
         "${CMAKE_CURRENT_SOURCE_DIR}/main.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/main_preprogrammed_test.cpp"
     )
     idf_build_set_property(COMPILE_DEFINITIONS RMT_TEST APPEND)
+elseif(DEFINED PP_MOVE AND PP_MOVE EQUAL 1)
+    message(STATUS "Building for testing preprogrammed movements")
+    list(REMOVE_ITEM ALL_SRCS
+        "${CMAKE_CURRENT_SOURCE_DIR}/main.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/main_rmt_test.cpp"
+    )
+    idf_build_set_property(COMPILE_DEFINITIONS PP_MOVE APPEND)
 else()
     list(REMOVE_ITEM ALL_SRCS
     "${CMAKE_CURRENT_SOURCE_DIR}/main_rmt_test.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/main_preprogrammed_test.cpp"
     )
 endif()
 
