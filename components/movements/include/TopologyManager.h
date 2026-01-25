@@ -5,9 +5,9 @@
 #include <unordered_map>
 #include <unordered_set>
 
-// move these to constants header file?
-#include "RMTManager.h"
-#include "DataLinkManager.h"
+#include "constants/rmt.h"
+#include "constants/datalink.h"
+
 #include "Frames.h"
 #include "TopologyBuilder.h"
 #include <vector>
@@ -26,7 +26,7 @@ class TopologyManager {
         esp_err_t verify_topology();
         esp_err_t get_curr_topology(std::unordered_map<uint16_t, std::vector<std::pair<uint8_t, uint16_t>>>& topology);
         esp_err_t write_nvs_topology();
-        esp_err_t get_nvs_topology(std::unordered_map<uint16_t, std::vector<Topology::ChannelBoardConn>>& topology);
+        esp_err_t get_nvs_topology(std::unordered_map<uint16_t, std::vector<std::pair<uint8_t, uint16_t>>>& topology);
 
     private:
         std::unordered_map<uint16_t, std::vector<Topology::ChannelBoardConn>> topology;
