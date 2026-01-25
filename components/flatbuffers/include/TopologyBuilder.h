@@ -18,6 +18,7 @@ namespace Flatbuffers {
         Topology::ChannelBoardConn build_connections(uint8_t channel, uint16_t board_id);
         
     private:
+        flatbuffers::Offset<Topology::NeighbourBlob> build_neighbour_info(uint16_t board_id, const std::vector<Topology::ChannelBoardConn>& connections);
         flatbuffers::FlatBufferBuilder builder_;
     };
 }
