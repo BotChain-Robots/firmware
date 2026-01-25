@@ -44,7 +44,6 @@ extern "C" [[noreturn]] void app_main(void) {
     }
     ESP_ERROR_CHECK(ret);
 
-    esp_netif_init();
     esp_event_loop_create_default();
 
     printf("finished esp init\n");
@@ -140,8 +139,57 @@ extern "C" [[noreturn]] void app_main(void) {
 
     if (res != ESP_OK){
         ESP_LOGE(MOVEMENT_DEBUG_TAG, "Topology verification incorrectly failed");
+        restart();
     } else {
         ESP_LOGI(MOVEMENT_DEBUG_TAG, "Topology verification passed");
+    }
+
+    res = obj.write_nvs_topology();
+    
+    if (res == ESP_OK){
+        ESP_LOGI(MOVEMENT_DEBUG_TAG, "Topology NVS write success");
+    } else {
+        ESP_LOGE(MOVEMENT_DEBUG_TAG, "Topology NVS write failed");
+        restart();
+    }
+
+    std::unordered_map<uint16_t, std::vector<std::pair<uint8_t, uint16_t>>> nvs_topology;
+
+    res = obj.get_nvs_topology(nvs_topology);
+    if (res == ESP_OK){
+        ESP_LOGI(MOVEMENT_DEBUG_TAG, "Topology NVS read success");
+    } else {
+        ESP_LOGE(MOVEMENT_DEBUG_TAG, "Topology NVS read failed");
+        restart();
+    }
+
+    if (nvs_topology.size() != test_connections.size()){
+        ESP_LOGE(MOVEMENT_DEBUG_TAG, "Topology NVS size is different");
+        restart();
+    }
+
+    for (const auto& connections : test_connections){
+        const auto& test = connections.first;
+
+        if (nvs_topology.find(connections.second) == nvs_topology.end()){
+            ESP_LOGE(MOVEMENT_DEBUG_TAG, "Failed to find board %d in topology", connections.second);
+            restart();
+        }
+
+        if (test.size() != nvs_topology[connections.second].size()){
+            ESP_LOGE(MOVEMENT_DEBUG_TAG, "Board %d connections are different in topology", connections.second);
+            restart();
+        }
+    }
+
+    ESP_LOGI(MOVEMENT_DEBUG_TAG, "Topology NVS R/W success! Got back the same topology");
+
+    ESP_LOGI(MOVEMENT_DEBUG_TAG, "Topology NVS got:");
+
+    for (const auto& [key, connections] : nvs_topology){
+        for (const auto& c : connections){
+            ESP_LOGI(MOVEMENT_DEBUG_TAG, "Board %d -> board %d on channel %d", key, c.second, c.first);
+        }
     }
 
     //test removing a board from topology

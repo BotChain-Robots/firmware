@@ -6,6 +6,7 @@
 #define MOVEMENTS_NVS_NAMESPACE "movements"
 #define MOVEMENTS_NVS_KEY "key"
 #define MOVEMENTS_NVS_TOPOLOGY_KEY "topology"
+#define MOVEMENTS_NVS_TOPOLOGY_DATA_SIZE_KEY "data_size"
 #define MOVEMENTS_DEBUG_TAG "movements"
 
 class MovementManager {

@@ -14,11 +14,11 @@ namespace Flatbuffers {
     public:
         TopologyBuilder() : builder_(RIP_MAX_ROUTES*(sizeof(Topology::NeighbourBlob) + sizeof(Topology::ChannelBoardConn)*MAX_CHANNELS)) {}
 
-        SerializedMessage build_topology(const std::vector<flatbuffers::Offset<Topology::NeighbourBlob>>& topology);
-        flatbuffers::Offset<Topology::NeighbourBlob> build_neighbour_info(uint16_t board_id, const std::vector<Topology::ChannelBoardConn>& connections);
+        SerializedMessage build_topology(const std::unordered_map<uint16_t, std::vector<Topology::ChannelBoardConn>>& topology_map);
         Topology::ChannelBoardConn build_connections(uint8_t channel, uint16_t board_id);
-
+        
     private:
+        flatbuffers::Offset<Topology::NeighbourBlob> build_neighbour_info(uint16_t board_id, const std::vector<Topology::ChannelBoardConn>& connections);
         flatbuffers::FlatBufferBuilder builder_;
     };
 }
