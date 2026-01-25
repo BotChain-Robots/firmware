@@ -42,6 +42,10 @@ To run the sample code, add the compiler variable `PP_MOVE=1` when compiling.
 
 You can use the `SRC_BOARD` compiler variable to set a custom board id.
 
+The sample topology used to test:
+
+![Sample Topology Used for Testing](images/sample_topology.png)
+
 # cat
 
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣴⣿⣿⡷⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀

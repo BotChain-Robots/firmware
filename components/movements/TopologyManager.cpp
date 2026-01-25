@@ -204,18 +204,90 @@ esp_err_t TopologyManager::get_curr_topology(std::unordered_map<uint16_t, std::v
     return ESP_OK;
 }
 
-// esp_err_t TopologyManager::write_nvs_topology(){
-//     if (!ready){
-//         return ESP_ERR_INVALID_STATE;
-//     }
-//     return ESP_OK;
-// }
+esp_err_t TopologyManager::write_nvs_topology(){
+    if (!ready){
+        return ESP_ERR_INVALID_STATE;
+    }
 
-// esp_err_t TopologyManager::get_nvs_topology(struct Topology& topology){
-//     if (!ready){
-//         return ESP_ERR_INVALID_STATE;
-//     }
-//     return ESP_OK;
-// }
+    Flatbuffers::SerializedMessage m = builder.build_topology(topology);
+
+    ESP_LOGI(TOPOLOGY_DEBUG_TAG, "Saving topology blob...");
+
+    esp_err_t res = nvs_set_u32(handle, MOVEMENTS_NVS_TOPOLOGY_DATA_SIZE_KEY, static_cast<uint32_t>(m.size));
+
+    res = nvs_commit(handle);
+    if (res != ESP_OK) {
+        ESP_LOGE(TOPOLOGY_DEBUG_TAG, "Failed to commit data size");
+        return res;
+    }
+
+    res = nvs_set_blob(handle, MOVEMENTS_NVS_TOPOLOGY_KEY, m.data, m.size);
+
+    if (res != ESP_OK){
+        ESP_LOGE(TOPOLOGY_DEBUG_TAG, "Failed to write to nvs");
+        return res;
+    }
+
+    res = nvs_commit(handle);
+    if (res != ESP_OK) {
+        ESP_LOGE(TOPOLOGY_DEBUG_TAG, "Failed to commit topology");
+        return res;
+    }
+
+    return ESP_OK;
+}
+
+esp_err_t TopologyManager::get_nvs_topology(std::unordered_map<uint16_t, std::vector<std::pair<uint8_t, uint16_t>>>& topology){
+    if (!ready) {
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    size_t size = 0;
+    esp_err_t res = nvs_get_u32(handle,MOVEMENTS_NVS_TOPOLOGY_DATA_SIZE_KEY, reinterpret_cast<uint32_t*>(&size));
+
+    if (res != ESP_OK) {
+        ESP_LOGE(TOPOLOGY_DEBUG_TAG, "Failed to read data size");
+        return res;
+    }
+
+    std::vector<uint8_t> buffer(size);
+
+    res = nvs_get_blob(handle, MOVEMENTS_NVS_TOPOLOGY_KEY, buffer.data(), &size);
+
+    if (res != ESP_OK) {
+        ESP_LOGE(TOPOLOGY_DEBUG_TAG, "Failed to read blob");
+        return res;
+    }
+
+    // Verify the FlatBuffer
+    flatbuffers::Verifier verifier(buffer.data(), buffer.size());
+    if (!Topology::VerifyTopologyInfoBuffer(verifier)) {
+        ESP_LOGE(TOPOLOGY_DEBUG_TAG, "FlatBuffer verification failed");
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    // Parse root
+    const Topology::TopologyInfo* topo = Topology::GetTopologyInfo(buffer.data());
+
+    topology.clear();
+
+    // Replace neighbours() with your actual accessor name
+    auto neighbours = topo->boards();
+
+    for (const auto* nb : *neighbours) {
+        uint16_t board_id = nb->curr_board_id();
+
+        std::vector<std::pair<uint8_t, uint16_t>> connections;
+        connections.reserve(nb->neighbour_connections()->size());
+
+        for (const auto* conn : *nb->neighbour_connections()) {
+            connections.emplace_back(conn->channel(), conn->board_id());
+        }
+
+        topology.emplace(board_id, std::move(connections));
+    }
+
+    return ESP_OK;
+}
 
 #endif //MOVEMENTS
