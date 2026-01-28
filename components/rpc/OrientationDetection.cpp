@@ -21,16 +21,12 @@ void OrientationDetection::init() {
 
 Orientation OrientationDetection::get_orientation(const uint8_t channel) {
     if (gpio_get_level(static_cast<gpio_num_t>(CHANNEL_TO_90_DEG_MAP[channel]))) {
-        ESP_LOGD(TAG, "90deg");
         return Orientation_Deg90;
     } else if (gpio_get_level(static_cast<gpio_num_t>(CHANNEL_TO_180_DEG_MAP[channel]))) {
-        ESP_LOGD(TAG, "180deg");
         return Orientation_Deg180;
     } else if (gpio_get_level(static_cast<gpio_num_t>(CHANNEL_TO_270_DEG_MAP[channel]))) {
-        ESP_LOGD(TAG, "270deg");
         return Orientation_Deg270;
     } else {
-        ESP_LOGD(TAG, "No orientation detected");
         return Orientation_Deg0;
     }
 }

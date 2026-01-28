@@ -4,7 +4,7 @@
 #include <cstdint>
 
 #define SCHEDULER_MUTEX_WAIT 10 //max time duration to wait
-#define SCHEDULER_PERIOD_MS 140
+#define SCHEDULER_PERIOD_MS 10
 #define RECEIVE_TASK_PERIOD_MS 2
 
 #define GENERIC_FRAME_SLIDING_WINDOW_SIZE 5 //defines the maximum size of the sliding window before resending previously un-ack'd fragments
@@ -20,13 +20,13 @@ typedef struct _frame_scheduler_metadata {
     FrameHeader header; //header of the frame
     uint16_t generic_frame_data_offset; //For data greater than MAX_GENERIC_DATA_LEN to keep track of fragment positions
     int64_t enqueue_time_ns; //when the frame has been first enqueued into the priority queue
-    uint8_t* data; //dyanmically allocated memory - contains the actual data
-    uint16_t len; // length of the actual data
+    std::shared_ptr<std::vector<uint8_t>> data; // the actual data, and length of data
 
     //sliding window
     uint16_t last_ack; //fragment number represnting the last ack'd fragment (from rx) - head
     uint16_t curr_fragment; //fragment number of the current fragment being sent
     uint32_t timeout;
+
 } SchedulerMetadata;
 
 typedef struct _frame_ack_record {
@@ -43,21 +43,21 @@ typedef struct _send_ack_metadata{
 typedef struct _frame_compare {
     /**
      * @brief Uses aging based priority scheduling (linearly increasing priority with time)
-     * 
+     *
      * $P_f = B_f - A_f\alpha$
-     * 
+     *
      * - $P_f$ is the effective priority value (lower comes first)
-     * 
+     *
      * - $B_f$ is the base priority
-     * 
+     *
      * - $A_f$ is the age (amount of time the frame has waited in the queue)
-     * 
+     *
      * - $\alpha$ is the aging factor (rate at which a frame increases priority)
-     * 
-     * @param a 
-     * @param b 
-     * @return true 
-     * @return false 
+     *
+     * @param a
+     * @param b
+     * @return true
+     * @return false
      */
     bool operator()(const SchedulerMetadata& a, const SchedulerMetadata& b) const {
         int64_t now = esp_timer_get_time();

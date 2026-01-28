@@ -13,15 +13,15 @@
 #include "IConnectionManager.h"
 #include "IDiscoveryService.h"
 #include "IRPCServer.h"
-#include "PtrQueue.h"
+#include "BlockingQueue.h"
 #include "enums.h"
 
 class CommunicationFactory {
 public:
     static std::unique_ptr<IConnectionManager> create_connection_manager(CommunicationMethod type);
     static std::unique_ptr<IDiscoveryService> create_discovery_service(CommunicationMethod type);
-    static std::unique_ptr<IRPCServer> create_lossy_server(CommunicationMethod type, const std::shared_ptr<PtrQueue<std::vector<uint8_t>>> &rx_queue);
-    static std::unique_ptr<IRPCServer> create_lossless_server(CommunicationMethod type, const std::shared_ptr<PtrQueue<std::vector<uint8_t>>>& rx_queue);
+    static std::unique_ptr<IRPCServer> create_lossy_server(CommunicationMethod type, const std::shared_ptr<BlockingQueue<std::unique_ptr<std::vector<uint8_t>>>> &rx_queue);
+    static std::unique_ptr<IRPCServer> create_lossless_server(CommunicationMethod type, const std::shared_ptr<BlockingQueue<std::unique_ptr<std::vector<uint8_t>>>>& rx_queue);
 };
 
 #endif //COMMUNICATIONFACTORY_H

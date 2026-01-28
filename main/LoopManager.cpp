@@ -71,7 +71,9 @@
 void LoopManager::send_sensor_reading(bool durable) const {
     Flatbuffers::SensorMessageBuilder smb{};
     // todo: get data from sensor
-    auto data = m_actuator->get_sensor_data();
-    const auto [ptr, size] = smb.build_sensor_message(data);
-    m_messaging_interface->send(reinterpret_cast<char *>(ptr), size, PC_ADDR, SENSOR_TAG, durable);
+    if (m_actuator) {
+        auto data = m_actuator->get_sensor_data();
+        const auto [ptr, size] = smb.build_sensor_message(data);
+        m_messaging_interface->send(reinterpret_cast<char *>(ptr), size, PC_ADDR, SENSOR_TAG, durable);
+    }
 }

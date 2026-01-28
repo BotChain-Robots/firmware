@@ -1,3 +1,4 @@
+#include <chrono>
 #include <memory>
 
 #include "bits/shared_ptr_base.h"
@@ -15,6 +16,8 @@
 #include "sys/param.h"
 #include "wireless/TCPServer.h"
 
+#define RX_QUEUE_ENQUEUE_TIMEOUT_MS 50  // must be small to ensure we drain TCP buffer
+
 #define TAG "TCPServer"
 
 #define MIN(X, Y) (((X) < (Y)) ? (X) : (Y))
@@ -24,7 +27,7 @@
 //       - tx from board
 
 TCPServer::TCPServer(const int port,
-                     const std::shared_ptr<PtrQueue<std::vector<uint8_t>>> &rx_queue) {
+                     const std::shared_ptr<BlockingQueue<std::unique_ptr<std::vector<uint8_t>>>> &rx_queue) {
     this->m_port = port;
     this->m_mutex = xSemaphoreCreateMutex();
     this->m_clients = std::unordered_set<int>();
@@ -215,7 +218,7 @@ void TCPServer::shutdown() {
                     } else {
                         ESP_LOGD(TAG, "TCP Server Received %d bytes\n", len);
                         buffer->resize(len);
-                        that->m_rx_queue->enqueue(std::move(buffer));
+                        that->m_rx_queue->enqueue(std::move(buffer), std::chrono::milliseconds(RX_QUEUE_ENQUEUE_TIMEOUT_MS));
                     }
                 }
             }
@@ -260,10 +263,12 @@ bool TCPServer::authenticate_client(int sock) {
     return 0;
 }
 
-int TCPServer::send_msg(char *buffer, const uint32_t length) const {
+int TCPServer::send_msg(uint8_t *buffer, size_t size) const {
     if (!is_network_connected()) {
         return -1;
     }
+
+    const auto length = (uint32_t)size;
 
     for (const auto client_sock : m_clients) {
         send(client_sock, &length, 4, 0);

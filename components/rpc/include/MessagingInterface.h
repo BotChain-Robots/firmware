@@ -9,6 +9,7 @@
 #include <unordered_map>
 #include <flatbuffers_generated/TopologyMessage_generated.h>
 
+#include "BlockingQueue.h"
 #include "constants/app_comms.h"
 #include "CommunicationRouter.h"
 
@@ -16,8 +17,8 @@ class MessagingInterface {
 public:
     explicit MessagingInterface()
         : m_config_manager(ConfigManager::get_instance()),
-            m_mpi_rx_queue(xQueueCreate(MAX_RX_BUFFER_SIZE, RX_QUEUE_SIZE)),
-            m_router(std::make_unique<CommunicationRouter>([this](const char* buffer, const int size) { handleRecv(buffer, size); })),
+            m_mpi_rx_queue(std::make_unique<BlockingQueue<std::unique_ptr<std::vector<uint8_t>>>>(RX_QUEUE_SIZE)),
+            m_router(std::make_unique<CommunicationRouter>([this](std::unique_ptr<std::vector<uint8_t>>&& buffer) { handleRecv(std::move(buffer)); })),
             m_map_semaphore(xSemaphoreCreateMutex()) {};
 
     ~MessagingInterface();
@@ -31,13 +32,13 @@ public:
     uint8_t get_leader() const;
 
 private:
-    void handleRecv(const char* recv_buffer, int recv_size);
+    void handleRecv(std::unique_ptr<std::vector<uint8_t>>&& buffer);
 
     void checkOrInsertTag(uint8_t tag);
 
     ConfigManager& m_config_manager;
     uint16_t m_sequence_number = 0;
-    QueueHandle_t m_mpi_rx_queue; // todo: maybe move this down classes more
+    std::unique_ptr<BlockingQueue<std::unique_ptr<std::vector<uint8_t>>>> m_mpi_rx_queue;
     std::unique_ptr<CommunicationRouter> m_router;
     SemaphoreHandle_t m_map_semaphore;
     std::unordered_map<uint8_t, QueueHandle_t> m_tag_to_queue;
