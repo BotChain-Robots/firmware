@@ -5,5 +5,6 @@ sdkconfig.old
 .vscode/*
 /.cache
 test/build/*
+build_movement
 build_A
 build_B

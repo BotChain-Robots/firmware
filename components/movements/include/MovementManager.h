@@ -7,6 +7,8 @@
 #define MOVEMENTS_NVS_KEY "key"
 #define MOVEMENTS_NVS_TOPOLOGY_KEY "topology"
 #define MOVEMENTS_NVS_TOPOLOGY_DATA_SIZE_KEY "data_size"
+#define MOVEMENTS_NVS_SET_KEY "mvt_set"
+#define MOVEMENTS_NVS_SET_SIZE_KEY "mvt_data_size"
 #define MOVEMENTS_DEBUG_TAG "movements"
 
 class MovementManager {
