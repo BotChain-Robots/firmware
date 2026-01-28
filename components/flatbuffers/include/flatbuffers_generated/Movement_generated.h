@@ -20,6 +20,9 @@ struct ConditionBlob;
 struct MovementEntry;
 struct MovementEntryBuilder;
 
+struct MovementVector;
+struct MovementVectorBuilder;
+
 struct MovementSet;
 struct MovementSetBuilder;
 
@@ -165,14 +168,20 @@ inline ::flatbuffers::Offset<MovementEntry> CreateMovementEntry(
   return builder_.Finish();
 }
 
-struct MovementSet FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
-  typedef MovementSetBuilder Builder;
+struct MovementVector FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
+  typedef MovementVectorBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
-    VT_NUM_MOVEMENTS = 4,
+    VT_KEY = 4,
     VT_MOVEMENTS = 6
   };
-  uint8_t num_movements() const {
-    return GetField<uint8_t>(VT_NUM_MOVEMENTS, 0);
+  uint8_t key() const {
+    return GetField<uint8_t>(VT_KEY, 0);
+  }
+  bool KeyCompareLessThan(const MovementVector * const o) const {
+    return key() < o->key();
+  }
+  int KeyCompareWithValue(uint8_t _key) const {
+    return static_cast<int>(key() > _key) - static_cast<int>(key() < _key);
   }
   const ::flatbuffers::Vector<::flatbuffers::Offset<Movement::MovementEntry>> *movements() const {
     return GetPointer<const ::flatbuffers::Vector<::flatbuffers::Offset<Movement::MovementEntry>> *>(VT_MOVEMENTS);
@@ -180,10 +189,70 @@ struct MovementSet FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   template <bool B = false>
   bool Verify(::flatbuffers::VerifierTemplate<B> &verifier) const {
     return VerifyTableStart(verifier) &&
-           VerifyField<uint8_t>(verifier, VT_NUM_MOVEMENTS, 1) &&
+           VerifyField<uint8_t>(verifier, VT_KEY, 1) &&
            VerifyOffset(verifier, VT_MOVEMENTS) &&
            verifier.VerifyVector(movements()) &&
            verifier.VerifyVectorOfTables(movements()) &&
+           verifier.EndTable();
+  }
+};
+
+struct MovementVectorBuilder {
+  typedef MovementVector Table;
+  ::flatbuffers::FlatBufferBuilder &fbb_;
+  ::flatbuffers::uoffset_t start_;
+  void add_key(uint8_t key) {
+    fbb_.AddElement<uint8_t>(MovementVector::VT_KEY, key, 0);
+  }
+  void add_movements(::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<Movement::MovementEntry>>> movements) {
+    fbb_.AddOffset(MovementVector::VT_MOVEMENTS, movements);
+  }
+  explicit MovementVectorBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  ::flatbuffers::Offset<MovementVector> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = ::flatbuffers::Offset<MovementVector>(end);
+    return o;
+  }
+};
+
+inline ::flatbuffers::Offset<MovementVector> CreateMovementVector(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    uint8_t key = 0,
+    ::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<Movement::MovementEntry>>> movements = 0) {
+  MovementVectorBuilder builder_(_fbb);
+  builder_.add_movements(movements);
+  builder_.add_key(key);
+  return builder_.Finish();
+}
+
+inline ::flatbuffers::Offset<MovementVector> CreateMovementVectorDirect(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    uint8_t key = 0,
+    const std::vector<::flatbuffers::Offset<Movement::MovementEntry>> *movements = nullptr) {
+  auto movements__ = movements ? _fbb.CreateVector<::flatbuffers::Offset<Movement::MovementEntry>>(*movements) : 0;
+  return Movement::CreateMovementVector(
+      _fbb,
+      key,
+      movements__);
+}
+
+struct MovementSet FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
+  typedef MovementSetBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_MOVEMENT_MAP = 4
+  };
+  const ::flatbuffers::Vector<::flatbuffers::Offset<Movement::MovementVector>> *movement_map() const {
+    return GetPointer<const ::flatbuffers::Vector<::flatbuffers::Offset<Movement::MovementVector>> *>(VT_MOVEMENT_MAP);
+  }
+  template <bool B = false>
+  bool Verify(::flatbuffers::VerifierTemplate<B> &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyOffset(verifier, VT_MOVEMENT_MAP) &&
+           verifier.VerifyVector(movement_map()) &&
+           verifier.VerifyVectorOfTables(movement_map()) &&
            verifier.EndTable();
   }
 };
@@ -192,11 +261,8 @@ struct MovementSetBuilder {
   typedef MovementSet Table;
   ::flatbuffers::FlatBufferBuilder &fbb_;
   ::flatbuffers::uoffset_t start_;
-  void add_num_movements(uint8_t num_movements) {
-    fbb_.AddElement<uint8_t>(MovementSet::VT_NUM_MOVEMENTS, num_movements, 0);
-  }
-  void add_movements(::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<Movement::MovementEntry>>> movements) {
-    fbb_.AddOffset(MovementSet::VT_MOVEMENTS, movements);
+  void add_movement_map(::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<Movement::MovementVector>>> movement_map) {
+    fbb_.AddOffset(MovementSet::VT_MOVEMENT_MAP, movement_map);
   }
   explicit MovementSetBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
@@ -211,23 +277,19 @@ struct MovementSetBuilder {
 
 inline ::flatbuffers::Offset<MovementSet> CreateMovementSet(
     ::flatbuffers::FlatBufferBuilder &_fbb,
-    uint8_t num_movements = 0,
-    ::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<Movement::MovementEntry>>> movements = 0) {
+    ::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<Movement::MovementVector>>> movement_map = 0) {
   MovementSetBuilder builder_(_fbb);
-  builder_.add_movements(movements);
-  builder_.add_num_movements(num_movements);
+  builder_.add_movement_map(movement_map);
   return builder_.Finish();
 }
 
 inline ::flatbuffers::Offset<MovementSet> CreateMovementSetDirect(
     ::flatbuffers::FlatBufferBuilder &_fbb,
-    uint8_t num_movements = 0,
-    const std::vector<::flatbuffers::Offset<Movement::MovementEntry>> *movements = nullptr) {
-  auto movements__ = movements ? _fbb.CreateVector<::flatbuffers::Offset<Movement::MovementEntry>>(*movements) : 0;
+    std::vector<::flatbuffers::Offset<Movement::MovementVector>> *movement_map = nullptr) {
+  auto movement_map__ = movement_map ? _fbb.CreateVectorOfSortedTables<Movement::MovementVector>(movement_map) : 0;
   return Movement::CreateMovementSet(
       _fbb,
-      num_movements,
-      movements__);
+      movement_map__);
 }
 
 inline const Movement::MovementSet *GetMovementSet(const void *buf) {

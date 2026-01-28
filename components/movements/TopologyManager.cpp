@@ -17,6 +17,10 @@ TopologyManager::~TopologyManager(){
     nvs_close(handle);
 }
 
+bool TopologyManager::is_ready(){
+    return ready;
+}
+
 /**
  * @brief Creates a `Topology::NeighbourBlob` based on the input parameters and adds the blob to the internal topology map
  * 
@@ -72,6 +76,14 @@ esp_err_t TopologyManager::add_board_to_topology(const std::vector<std::pair<uin
     return ESP_OK;
 }
 
+/**
+ * @brief Removes the board associated with `board_id`
+ * 
+ * @warning This function does not remove any existing links on other boards on the topology
+ * 
+ * @param board_id 
+ * @return esp_err_t 
+ */
 esp_err_t TopologyManager::remove_board_from_topology(uint16_t board_id){
     if (!ready){
         return ESP_ERR_INVALID_STATE;
@@ -86,6 +98,13 @@ esp_err_t TopologyManager::remove_board_from_topology(uint16_t board_id){
     return ESP_OK;
 }
 
+/**
+ * @brief Returns a vector of connections that represents the channel connection to a board id from `curr_board_id`
+ * 
+ * @param connections 
+ * @param curr_board_id 
+ * @return esp_err_t 
+ */
 esp_err_t TopologyManager::get_board_in_topology(std::vector<std::pair<uint8_t, uint16_t>>& connections, uint16_t curr_board_id){
     if (!ready){
         return ESP_ERR_INVALID_STATE;
@@ -106,12 +125,23 @@ esp_err_t TopologyManager::get_board_in_topology(std::vector<std::pair<uint8_t, 
     return ESP_OK;
 }
 
+/**
+ * @brief Verifies the topology
+ * 
+ * Conditions to fail:
+ * 
+ * 1. Any board that is referenced in the topology does not have a reciprocal connection (eg. A -> B and B -> A)
+ * 
+ * 2. The topology contains 2 separate graphs (a board in the topology should be in the same graph with some sort of path to all other boards)
+ * 
+ * @return esp_err_t 
+ */
 esp_err_t TopologyManager::verify_topology(){
     if (!ready){
         return ESP_ERR_INVALID_STATE;
     }
 
-    if (topology.size() == 0){
+    if (topology.size() == 0 || topology.size() >= RIP_MAX_ROUTES){
         return ESP_ERR_INVALID_STATE;
     }
 
@@ -187,6 +217,12 @@ esp_err_t TopologyManager::verify_topology(){
     return ESP_OK;
 }
 
+/**
+ * @brief Gets the current topology stored in the manager
+ * 
+ * @param topology 
+ * @return esp_err_t 
+ */
 esp_err_t TopologyManager::get_curr_topology(std::unordered_map<uint16_t, std::vector<std::pair<uint8_t, uint16_t>>>& topology){
     if (!ready){
         return ESP_ERR_INVALID_STATE;
@@ -204,6 +240,11 @@ esp_err_t TopologyManager::get_curr_topology(std::unordered_map<uint16_t, std::v
     return ESP_OK;
 }
 
+/**
+ * @brief Writes the topology stored in the manager onto the board's NVS
+ * 
+ * @return esp_err_t 
+ */
 esp_err_t TopologyManager::write_nvs_topology(){
     if (!ready){
         return ESP_ERR_INVALID_STATE;
@@ -237,6 +278,12 @@ esp_err_t TopologyManager::write_nvs_topology(){
     return ESP_OK;
 }
 
+/**
+ * @brief Read's the board NVS to retreve the saved topology (if it exists)
+ * 
+ * @param topology 
+ * @return esp_err_t 
+ */
 esp_err_t TopologyManager::get_nvs_topology(std::unordered_map<uint16_t, std::vector<std::pair<uint8_t, uint16_t>>>& topology){
     if (!ready) {
         return ESP_ERR_INVALID_STATE;
