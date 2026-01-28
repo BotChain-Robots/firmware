@@ -10,6 +10,9 @@
 
 #include "constants/datalink.h"
 #include "TopologyManager.h"
+#include "MovementSetManager.h"
+#include "MovementSetBuilder.h"
+#include "flatbuffers_generated/RobotModule_generated.h"
 
 #include <esp_netif.h>
 #include <esp_event.h>
@@ -237,6 +240,80 @@ extern "C" [[noreturn]] void app_main(void) {
     }
 
     ESP_LOGI(MOVEMENT_DEBUG_TAG, "Current topology is correct");
+
+    //Testing Movements
+
+    MovementSetManager movement_set_mgr = MovementSetManager();
+
+    std::unordered_map<uint8_t, std::vector<MovementEntryData>> movements = {
+        {0, {
+            {69, (uint8_t)ModuleType_DC_MOTOR, 0, Movement::ConditionBlob(0,0,0,0), (uint8_t)ACK_VALUES::NO_ACK, 0, 0},
+            {67, (uint8_t)ModuleType_SERVO_1, 0, Movement::ConditionBlob(0,0,0,0), (uint8_t)ACK_VALUES::NO_ACK, 0, 0},
+        }},
+        {1, {
+            {198, (uint8_t)ModuleType_BATTERY, 0, Movement::ConditionBlob(0,0,0,0), (uint8_t)ACK_VALUES::NO_ACK, 0, 0}
+        }},
+        {2, {
+            {56, (uint8_t)ModuleType_SERVO_1, 0, Movement::ConditionBlob(0,0,0,0), (uint8_t)ACK_VALUES::NO_ACK, 0, 0},
+            {69, (uint8_t)ModuleType_DC_MOTOR, 0, Movement::ConditionBlob(0,0,0,0), (uint8_t)ACK_VALUES::NO_ACK, 0, 0},
+            {26, (uint8_t)ModuleType_SERVO_2, 0, Movement::ConditionBlob(0,0,0,0), (uint8_t)ACK_VALUES::NO_ACK, 0, 0},
+        }},
+        {3, {
+            {69, (uint8_t)ModuleType_DC_MOTOR, 0, Movement::ConditionBlob(0,0,0,0), (uint8_t)ACK_VALUES::NO_ACK, 0, 0},
+            {67, (uint8_t)ModuleType_SERVO_1, 0, Movement::ConditionBlob(0,0,0,0), (uint8_t)ACK_VALUES::NO_ACK, 0, 0},
+        }},
+    };
+
+    for (auto& [index, movement_vector] : movements){
+        for (auto& movement : movement_vector){
+            res = movement_set_mgr.add_movement(movement, index);
+            if (res != ESP_OK){
+                ESP_LOGE(MOVEMENT_DEBUG_TAG, "Failed to insert movement for board id %d at index %d", movement.board_id, index);
+                restart();
+            }
+        }
+    }
+
+    res = movement_set_mgr.write_nvs_movement_set();
+
+    if (res != ESP_OK){
+        ESP_LOGE(MOVEMENT_DEBUG_TAG, "Failed to write movement set to nvs");
+        restart();
+    }
+
+    std::unordered_map<uint8_t, std::vector<MovementEntryData>> movements_test;
+
+    res = movement_set_mgr.get_nvs_movement_set(movements_test);
+
+    if (res != ESP_OK){
+        ESP_LOGE(MOVEMENT_DEBUG_TAG, "Failed to get movement set from nvs");
+        restart();
+    }
+
+    for (const auto& [key, vec] : movements) {
+        auto it = movements_test.find(key);
+        if (it == movements_test.end()) {
+            ESP_LOGE(MOVEMENTS_DEBUG_TAG, "Missing key %d", key);
+            restart();
+        }
+
+        const auto& vec2 = it->second;
+        if (vec.size() != vec2.size()) {
+            ESP_LOGE(MOVEMENTS_DEBUG_TAG, "Size mismatch at key %d: %d vs %d", key, vec.size(), vec2.size());
+            restart();
+        }
+
+        for (size_t i = 0; i < vec.size(); ++i) {
+            if (!(vec[i] == vec2[i])) {
+                ESP_LOGE(MOVEMENTS_DEBUG_TAG,
+                        "Mismatch at key %d index %d: board_id %d vs %d",
+                        key, i, vec[i].board_id, vec2[i].board_id);
+                restart();
+            }
+        }
+    }
+
+    ESP_LOGI(MOVEMENTS_DEBUG_TAG, "Successfully got movement set from nvs correctly");
 
     restart();
 
