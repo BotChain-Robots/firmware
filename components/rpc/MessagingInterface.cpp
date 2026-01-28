@@ -13,7 +13,6 @@
 #include "MPIMessageBuilder.h"
 
 MessagingInterface::~MessagingInterface() {
-    vQueueDelete(m_mpi_rx_queue);
     vSemaphoreDelete(m_map_semaphore);
 
     for (const auto queue: m_tag_to_queue | std::views::values) {
@@ -52,8 +51,8 @@ int MessagingInterface::sendrecv(char* send_buffer, const int send_size, const i
 }
 
 // todo: when handleRecv returns, remove from queue (from router)
-void MessagingInterface::handleRecv(const char* recv_buffer, int recv_size) {
-    const auto mpi_message = Flatbuffers::MPIMessageBuilder::parse_mpi_message(reinterpret_cast<const uint8_t *>(recv_buffer));
+void MessagingInterface::handleRecv(std::unique_ptr<std::vector<uint8_t>>&& buffer) {
+    const auto mpi_message = Flatbuffers::MPIMessageBuilder::parse_mpi_message(buffer->data());
 
     checkOrInsertTag(mpi_message->tag());
 

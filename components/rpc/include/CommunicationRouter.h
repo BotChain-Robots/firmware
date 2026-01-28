@@ -21,13 +21,15 @@
 #include "wireless/TCPServer.h"
 #include "wireless/WifiManager.h"
 
+#define MAX_NETWORK_QUEUE_SIZE 10
+
 class CommunicationRouter {
 
 public:
   explicit CommunicationRouter(
-      const std::function<void(char *, int)> &rx_callback)
-      : m_tcp_rx_queue(std::make_shared<PtrQueue<std::vector<uint8_t>>>(10)),
-        m_rx_callback(rx_callback),
+      const std::function<void(std::unique_ptr<std::vector<uint8_t>>&&)> &rx_callback)
+      : m_tcp_rx_queue(std::make_shared<BlockingQueue<std::unique_ptr<std::vector<uint8_t>>>>(MAX_NETWORK_QUEUE_SIZE)),
+        m_rx_callback(std::move(rx_callback)),
         m_config_manager(ConfigManager::get_instance()),
         m_pc_connection(CommunicationFactory::create_connection_manager(
             m_config_manager.get_communication_method())),
@@ -56,15 +58,15 @@ public:
   [[noreturn]] static void link_layer_thread(void *args);
   int send_msg(char *buffer, size_t length) const;
   void update_leader();
-  void route(uint8_t *buffer, size_t length) const;
+  void route(std::unique_ptr<std::vector<uint8_t>>&& buffer) const;
+  void route(uint8_t* buffer, size_t size) const;
   [[nodiscard]] std::pair<std::vector<uint8_t>, std::vector<Orientation>>
   get_physically_connected_modules() const;
   [[nodiscard]] uint8_t get_leader() const;
 
   // todo: does this really need to be here (so i can access from thread)?
-  std::shared_ptr<PtrQueue<std::vector<uint8_t>>>
-      m_tcp_rx_queue; // todo: this should probably be thread safe
-  std::function<void(char *, int)> m_rx_callback;
+  std::shared_ptr<BlockingQueue<std::unique_ptr<std::vector<uint8_t>>>> m_tcp_rx_queue;
+  std::function<void(std::unique_ptr<std::vector<std::uint8_t>>)> m_rx_callback;
 
 private:
   TaskHandle_t m_router_thread = nullptr;

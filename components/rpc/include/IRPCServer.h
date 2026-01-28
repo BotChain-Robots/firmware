@@ -5,12 +5,15 @@
 #ifndef IRPCSERVER_H
 #define IRPCSERVER_H
 
+#include <memory>
+#include <vector>
+
 class IRPCServer {
-public:
+  public:
     virtual ~IRPCServer() = default;
     virtual void startup() = 0;
     virtual void shutdown() = 0;
-    virtual int send_msg(char* buffer, uint32_t length) const = 0;
+    virtual int send_msg(uint8_t *buffer, size_t size) const = 0;
 };
 
 #endif //IRPCSERVER_H

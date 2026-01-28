@@ -30,7 +30,7 @@ std::unique_ptr<IDiscoveryService> CommunicationFactory::create_discovery_servic
     }
 }
 
-std::unique_ptr<IRPCServer> CommunicationFactory::create_lossy_server(const CommunicationMethod type, const std::shared_ptr<PtrQueue<std::vector<uint8_t>>>& rx_queue) {
+std::unique_ptr<IRPCServer> CommunicationFactory::create_lossy_server(const CommunicationMethod type, const std::shared_ptr<BlockingQueue<std::unique_ptr<std::vector<uint8_t>>>>& rx_queue) {
     switch (type) {
         case Wireless:
             return std::make_unique<UDPServer>(RECV_PORT, SEND_PORT, rx_queue);
@@ -39,7 +39,7 @@ std::unique_ptr<IRPCServer> CommunicationFactory::create_lossy_server(const Comm
     }
 }
 
-std::unique_ptr<IRPCServer> CommunicationFactory::create_lossless_server(const CommunicationMethod type, const std::shared_ptr<PtrQueue<std::vector<uint8_t>>>& rx_queue) {
+std::unique_ptr<IRPCServer> CommunicationFactory::create_lossless_server(const CommunicationMethod type, const std::shared_ptr<BlockingQueue<std::unique_ptr<std::vector<uint8_t>>>>& rx_queue) {
     switch (type) {
         case Wireless:
             return std::make_unique<TCPServer>(TCP_PORT, rx_queue);

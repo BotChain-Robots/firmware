@@ -46,7 +46,7 @@ enum class FrameType : uint8_t {
     DISTANCE_SENSOR_TYPE = 0xA0, //0b1010_0000
     SERVO_TYPE = 0xC0, //0b1100_0000
     MISC_CONTROL_TYPE = 0xD0, //0b1101_0000
-    
+
     //Generic Frames
     MISC_GENERIC_TYPE = 0x00, //0b0000_0000
     MISC_UDP_GENERIC_TYPE = 0x10, // 0b0001_0000 - Same as MISC_GENERIC_TYPE except no ACK frames will be expected
@@ -98,7 +98,7 @@ typedef struct _header{
 
 using Frame = std::variant<ControlFrame, GenericFrame>;
 
-ControlFrame make_control_frame_from_header(const FrameHeader& header); 
+ControlFrame make_control_frame_from_header(const FrameHeader& header);
 
 GenericFrame make_generic_frame_from_header(const FrameHeader& header);
 
@@ -108,7 +108,7 @@ typedef struct _fragment_metadata {
 } FragmentMetadata;
 
 typedef struct _receive_metadata{
-    uint8_t* data;
+    std::unique_ptr<std::vector<uint8_t>> data;
     uint16_t data_len;
     FrameHeader header;
 } Rx_Metadata;

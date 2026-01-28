@@ -26,7 +26,7 @@
 
 /**
  * @brief This struct keeps track of the current byte and bit index of the user data being transmmitted via RMT
- * 
+ *
  */
 typedef struct {
     size_t byte_index; //which byte is currently being encoded when transmitting
@@ -63,16 +63,16 @@ typedef struct _rmt_channel{
     QueueHandle_t rx_queue;
     rmt_symbol_word_t raw_symbols[RECEIVE_BUFFER_SIZE]; //buffer to store the symbols on receive
     rmt_symbol_word_t decoded_recv_symbols[RECEIVE_BUFFER_SIZE]; //allocating some dummy size buffer for decoded string
-    
+
     //General
     uint8_t status;
 } rmt_channel;
 
 /**
  * @brief Class representing the RMT/Physical Layer
- * 
+ *
  * @author Justin Chow
- * 
+ *
  */
 class RMTManager{
     public:
@@ -81,7 +81,7 @@ class RMTManager{
         esp_err_t send(uint8_t* data, size_t size, rmt_transmit_config_t* config, uint8_t channel_num); //temp function to send some string data
         esp_err_t receive(uint8_t* recv_buf, size_t size, size_t* output_size, uint8_t channel_num);
 
-        static size_t encoder_callback(const void* data, size_t data_size, size_t symbols_written, 
+        static size_t encoder_callback(const void* data, size_t data_size, size_t symbols_written,
             size_t symbols_free, rmt_symbol_word_t* symbols, bool* done, void* arg);
 
         static bool rmt_rx_done_callback(rmt_channel_handle_t channel, const rmt_rx_done_event_data_t *edata, void *user_data);
@@ -90,7 +90,7 @@ class RMTManager{
         esp_err_t start_receiving(uint8_t channel_num);
 
         esp_err_t wait_until_send_complete(uint8_t channel_num);
-        
+
     private:
         uint8_t num_channels; //number of channels initalized
         esp_err_t init();
@@ -101,7 +101,7 @@ class RMTManager{
         int convert_symbols_to_char(rmt_symbol_word_t* symbols, size_t num, uint8_t* string, size_t output_num);
 
         [[noreturn]] static void freeMemory(void* args);
-        
+
         rmt_channel channels[MAX_CHANNELS] = {0};
         //=====================TX=====================
 
@@ -119,7 +119,7 @@ class RMTManager{
         //rx_receive_config
         rmt_receive_config_t receive_config = {
             .signal_range_min_ns = 200,
-            .signal_range_max_ns = 200 * 1000, 
+            .signal_range_max_ns = 200 * 1000,
             .flags = {
                 .en_partial_rx = true
             }
@@ -151,5 +151,6 @@ static const GPIO_Channel_Pair gpio_channel_pairs[MAX_CHANNELS] = {
         .rx_pin = GPIO_NUM_15
     }
 }; //todo: use these pairs directly instead of the two arrays in the class definition above
+   // but ensure to update them first!!!
 
 #endif //RMT_COMMUNICATIONS

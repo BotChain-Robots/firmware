@@ -9,6 +9,7 @@
 #include "driver/ledc.h"
 #include "flatbuffers_generated/SensorMessage_generated.h"
 #include "util/number_utils.h"
+#include "esp_log.h"
 
 #define LOW_DUTY 200
 #define HIGH_DUTY 1000
@@ -44,7 +45,7 @@ void Servo1Actuator::actuate(uint8_t *cmd) {
         util::mapRange<int32_t>(angleControlCmd->angle(), 0, 180, LOW_DUTY, HIGH_DUTY);
 
     m_target = angleControlCmd->angle();
-    std::cout << "actuating to " << angleControlCmd->angle() << std::endl;
+    ESP_LOGI("TMP", "actuating to %d", angleControlCmd->angle());
 
     ESP_ERROR_CHECK(ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, newDuty));
     ESP_ERROR_CHECK(ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0));
