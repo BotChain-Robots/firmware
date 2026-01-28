@@ -30,21 +30,7 @@ namespace Flatbuffers{
 
         return { builder_.GetBufferPointer(), builder_.GetSize() };
     }
-
-    flatbuffers::Offset<Topology::NeighbourBlob> TopologyBuilder::build_neighbour_info(
-        uint16_t board_id,
-        const std::vector<Topology::ChannelBoardConn>& connections
-    ) {
-        auto conn_vec = builder_.CreateVectorOfStructs(connections);
-
-        return Topology::CreateNeighbourBlob(
-            builder_,
-            board_id,
-            static_cast<uint8_t>(connections.size()),
-            conn_vec
-        );
-    }
-
+    
     Topology::ChannelBoardConn TopologyBuilder::build_connections(uint8_t channel, uint16_t board_id){
         return Topology::ChannelBoardConn(channel, board_id);
     }
